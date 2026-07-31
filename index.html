@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>C-SPEC — Coating System Specification Builder</title>
+<style>
+  :root{
+    --navy:#173a2e; --navy-dark:#0e241c; --blue:#2f9e5b; --blue-light:#e8f7ee;
+    --grey-bg:#f4f6f9; --border:#d7dce3; --text:#222b3a; --muted:#6b7688;
+    --green:#2f9e5b; --red:#d0403a; --amber:#e0932c; --white:#fff;
+    --radius:6px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'Segoe UI',Arial,sans-serif;background:var(--grey-bg);color:var(--text);}
+  header.topbar{background:linear-gradient(135deg,#0e241c 0%,#173a2e 55%,#1f7a4d 100%);color:#fff;padding:26px 24px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(0,0,0,.18);position:relative;overflow:hidden;}
+  header.topbar::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 85% -20%, rgba(47,158,91,.35), transparent 55%);pointer-events:none;}
+  header.topbar .brand{display:flex;align-items:center;gap:16px;font-size:44px;font-weight:800;letter-spacing:.5px;position:relative;z-index:1;background:linear-gradient(90deg,#ffffff 0%,#cdf3dc 100%);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:0 2px 18px rgba(47,158,91,.35);}
+  header.topbar .brand svg{display:block;flex-shrink:0;filter:drop-shadow(0 3px 8px rgba(0,0,0,.35));}
+  header.topbar .brand span.tag{background:var(--blue);color:#fff;font-size:11px;padding:3px 8px;border-radius:4px;font-weight:600;letter-spacing:1px;}
+  header.topbar .meta{font-size:13px;color:#cfd8ea;}
+  nav.tabs{background:var(--navy-dark);display:flex;gap:2px;padding:0 20px;overflow-x:auto;}
+  nav.tabs button{background:none;border:none;color:#c8d2e6;padding:12px 18px;font-size:14px;cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap;}
+  nav.tabs button:hover{color:#fff;}
+  nav.tabs button.active{color:#fff;border-bottom-color:var(--blue);font-weight:600;}
+  nav.tabs .tabs-spacer{flex:1;}
+  main{max-width:1400px;margin:20px auto;padding:0 20px 60px;}
+  .card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;margin-bottom:20px;box-shadow:0 1px 2px rgba(0,0,0,.03);}
+  .card h2{margin:0 0 16px;font-size:18px;color:var(--navy);border-bottom:2px solid var(--blue-light);padding-bottom:10px;}
+  .card h3{font-size:15px;color:var(--navy);margin:0 0 10px;}
+  .row{display:flex;gap:16px;flex-wrap:wrap;}
+  .field{flex:1 1 220px;margin-bottom:14px;display:flex;flex-direction:column;}
+  .field label{font-size:12.5px;color:var(--muted);margin-bottom:4px;font-weight:600;}
+  .field label .req{color:var(--red);}
+  .req{color:var(--red);}
+  input,select,textarea{padding:8px 10px;border:1px solid var(--border);border-radius:5px;font-size:13.5px;font-family:inherit;background:#fff;color:var(--text);}
+  textarea{resize:vertical;min-height:46px;}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(47,158,91,.12);}
+  button{cursor:pointer;font-family:inherit;}
+  .btn{background:var(--blue);color:#fff;border:none;padding:9px 16px;border-radius:5px;font-size:13.5px;font-weight:600;}
+  .btn:hover{background:#2559c7;}
+  .btn.secondary{background:#fff;color:var(--blue);border:1px solid var(--blue);}
+  .btn.secondary:hover{background:var(--blue-light);}
+  .btn.grey{background:#eef1f5;color:var(--text);border:1px solid var(--border);}
+  .btn.grey:hover{background:#e2e7ee;}
+  .btn.danger{background:#fff;color:var(--red);border:1px solid var(--red);}
+  .btn.danger:hover{background:#fdeceb;}
+  .btn.amber{background:#fdf1e0;color:var(--amber);border:1px solid var(--amber);}
+  .btn.amber:hover{background:#fbe6c4;}
+  .btn.sm{padding:5px 10px;font-size:12px;}
+  .btn:disabled{opacity:.5;cursor:not-allowed;}
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center;}
+  .toolbar .spacer{flex:1;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  table th{background:var(--blue-light);color:var(--navy);text-align:left;padding:8px;border:1px solid var(--border);font-size:12px;white-space:nowrap;}
+  table td{padding:6px 8px;border:1px solid var(--border);vertical-align:middle;}
+  table td input, table td select{width:100%;min-width:70px;padding:5px 6px;font-size:12.5px;}
+  table td input.field-missing{border-color:var(--red);background:#fdeceb;}
+  input.field-missing, textarea.field-missing{border-color:var(--red);background:#fdeceb;}
+  input.derived-field{background:#eef1f5;color:var(--muted);cursor:not-allowed;}
+  tr.row-locked{background:#fdf7ec;}
+  .table-wrap{overflow-x:auto;border-radius:5px;}
+  .badge{display:inline-block;padding:3px 9px;border-radius:12px;font-size:11.5px;font-weight:700;}
+  .badge.completed{background:#e4f7ea;color:var(--green);}
+  .badge.draft{background:#fdf1e0;color:var(--amber);}
+  .list-table tr:hover{background:#f9fbff;cursor:pointer;}
+  .search-bar{display:flex;gap:10px;margin-bottom:16px;}
+  .search-bar input{flex:1;}
+  .empty-state{text-align:center;padding:50px 20px;color:var(--muted);}
+  .empty-state .big{font-size:40px;margin-bottom:10px;}
+  .position-block{border:1px solid var(--border);border-radius:6px;margin-bottom:18px;background:#fbfcfe;}
+  .position-header{display:flex;justify-content:space-between;align-items:center;background:var(--navy);color:#fff;padding:10px 16px;border-radius:6px 6px 0 0;}
+  .position-header input{flex:1;max-width:400px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.3);color:#fff;font-weight:600;}
+  .position-header input::placeholder{color:#cfd8ea;}
+  .position-body{padding:16px;}
+  .coat-actions{display:flex;gap:4px;}
+  .doc-row{display:flex;gap:12px;align-items:center;padding:10px;border:1px solid var(--border);border-radius:5px;margin-bottom:8px;background:#fafbfd;}
+  .doc-row .grow{flex:1;}
+  .steps{display:flex;gap:8px;margin-bottom:18px;}
+  .steps .step{flex:1;text-align:center;padding:10px;background:#eef1f5;border-radius:5px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;border:2px solid transparent;}
+  .steps .step.active{background:var(--blue-light);color:var(--blue);border-color:var(--blue);}
+  .hint{font-size:12px;color:var(--muted);margin-top:4px;}
+  .total-bar{display:flex;gap:24px;padding:10px 16px;background:#f4f6f9;font-size:13px;font-weight:600;color:var(--navy);border-radius:0 0 6px 6px;flex-wrap:wrap;}
+  footer.app-footer{text-align:center;color:var(--muted);font-size:12px;padding:20px;}
+  .hidden{display:none !important;}
+  .modal-overlay{position:fixed;inset:0;background:rgba(20,25,40,.5);display:flex;align-items:center;justify-content:center;z-index:100;}
+  .modal{background:#fff;border-radius:8px;padding:24px;max-width:480px;width:90%;}
+  .modal h3{margin-top:0;}
+  .modal .actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px;}
+  .print-only{display:none;}
+  @media print{
+    header.topbar, nav.tabs, .toolbar, .btn, .steps, .no-print, footer.app-footer{display:none !important;}
+    body{background:#fff;}
+    main{max-width:100%;margin:0;padding:0;}
+    .card{box-shadow:none;border:none;padding:0;margin-bottom:24px;}
+    .print-only{display:block;}
+  }
+  .flex-between{display:flex;justify-content:space-between;align-items:center;}
+  .small-note{font-size:12px;color:var(--muted);}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <svg width="52" height="52" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M24 3L43 11.5V22C43 33.5 35.4 41.8 24 45C12.6 41.8 5 33.5 5 22V11.5L24 3Z" fill="#2f9e5b"/>
+      <path d="M24 3L43 11.5V22C43 33.5 35.4 41.8 24 45V3Z" fill="#173a2e"/>
+      <path d="M15 23.5L21 29.5L33 17.5" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <span>C-SPEC</span>
+  </div>
+</header>
+
+<nav class="tabs">
+  <button class="tab-btn active" data-view="dashboard">Dashboard</button>
+  <button class="tab-btn" data-view="editor">Create / Edit Specification</button>
+  <button class="tab-btn" data-view="preview">Preview / Print</button>
+  <div class="tabs-spacer"></div>
+  <button class="tab-btn" data-view="products">Product Library</button>
+</nav>
+
+<main>
+
+<!-- ============ DASHBOARD ============ -->
+<section id="view-dashboard">
+  <div class="card">
+    <div class="toolbar">
+      <h2 style="border:none;margin:0;">My Specifications</h2>
+      <div class="spacer"></div>
+      <button class="btn" id="btnNewSpec">+ New Specification</button>
+      <button class="btn grey" id="btnImport">Import JSON</button>
+      <input type="file" id="importFile" accept=".json" class="hidden">
+    </div>
+    <div class="search-bar">
+      <input type="text" id="searchInput" placeholder="Search by title, customer, project...">
+      <select id="filterStatus">
+        <option value="">All statuses</option>
+        <option value="Draft">Draft</option>
+        <option value="Completed">Completed</option>
+      </select>
+    </div>
+    <div class="table-wrap">
+      <table class="list-table">
+        <thead>
+          <tr><th>Specification Title</th><th>Customer</th><th>Project</th><th>Location</th><th>Status</th><th>Last Edited</th><th>Actions</th></tr>
+        </thead>
+        <tbody id="specTableBody"></tbody>
+      </table>
+      <div class="empty-state hidden" id="emptyState">
+        <div class="big">📋</div>
+        <div>No specifications yet. Click "New Specification" to create your first coating system spec.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ EDITOR ============ -->
+<section id="view-editor" class="hidden">
+  <div class="steps">
+    <div class="step active" data-step="1">Step 1 · General Information</div>
+    <div class="step" data-step="2">Step 2 · Positions &amp; Coating Systems</div>
+    <div class="step" data-step="3">Step 3 · Documents &amp; Attachments</div>
+  </div>
+
+  <!-- STEP 1 -->
+  <div class="card step-panel" id="step-1">
+    <h2>General Information</h2>
+    <div class="row">
+      <div class="field"><label>Specification Title <span class="req">*</span></label><input id="f_title" placeholder="e.g. Protective Coating System - Tank Farm"></div>
+      <div class="field"><label>Project Title</label><input id="f_project" placeholder="e.g. ISO 12944 C5-High"></div>
+      <div class="field"><label>Customer / Client <span class="req">*</span></label><input id="f_customer" placeholder="Customer name"></div>
+      <div class="field"><label>Date</label><input type="date" id="f_date"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Category of Usage</label>
+        <select id="f_category">
+          <option>New Building / New Construction</option>
+          <option>Maintenance / Repair</option>
+          <option>Refurbishment</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <div class="field"><label>Asset Type</label>
+        <select id="f_asset">
+          <option>Commercial</option>
+          <option>Industrial</option>
+          <option>Marine / Offshore</option>
+          <option>Infrastructure</option>
+          <option>Oil &amp; Gas</option>
+          <option>Power Generation</option>
+          <option>Residential</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <div class="field"><label>Environment / Corrosivity Category</label>
+        <select id="f_corrosivity">
+          <option value="">--Select--</option>
+          <option>C1 - Very Low</option>
+          <option>C2 - Low</option>
+          <option>C3 - Medium</option>
+          <option>C4 - High</option>
+          <option>C5 - Very High</option>
+          <option>CX - Extreme</option>
+          <option>Im1 / Im2 / Im3 - Immersion</option>
+        </select>
+      </div>
+      <div class="field"><label>Durability Range</label>
+        <select id="f_durability">
+          <option value="">--Select--</option>
+          <option>Low (up to 7 years)</option>
+          <option>Medium (7-15 years)</option>
+          <option>High (15-25 years)</option>
+          <option>Very High (&gt;25 years)</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Location / Site</label><input id="f_location" placeholder="City, Country"></div>
+      <div class="field"><label>Reference / Spec No.</label><input id="f_reference" placeholder="Internal reference"></div>
+      <div class="field"><label>Version</label><input id="f_version" placeholder="V01"></div>
+      <div class="field"><label>Currency</label><input id="f_currency" placeholder="e.g. USD, MYR"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Prepared By</label><input id="f_preparedby" placeholder="Name / role"></div>
+      <div class="field"><label>Status</label>
+        <select id="f_status"><option>Draft</option><option>Completed</option></select>
+      </div>
+    </div>
+    <div class="field"><label>Remarks / Scope Notes</label><textarea id="f_remarks" placeholder="Additional notes, scope of work, exclusions..."></textarea></div>
+    <div class="toolbar no-print" style="margin-top:10px;">
+      <button class="btn secondary" id="btnSaveStep1">Save</button>
+      <button class="btn" id="toStep2">Save and Proceed to Step 2 →</button>
+    </div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="card step-panel hidden" id="step-2">
+    <div class="flex-between">
+      <h2 style="border:none;">Positions &amp; Coating Systems</h2>
+      <button class="btn no-print" id="btnAddPosition">+ Add Position / Area</button>
+    </div>
+    <p class="small-note">Add one or more positions (areas / substrates). Each position holds a full coating system made of any number of coats — flexible for primer, stripe coat, intermediate, topcoat, or custom layers.</p>
+    <div id="positionsContainer"></div>
+    <div class="toolbar no-print" style="margin-top:6px;">
+      <button class="btn grey" id="backStep1">← Back</button>
+      <button class="btn secondary" id="btnSaveStep2">Save</button>
+      <button class="btn" id="toStep3">Save and Proceed to Step 3 →</button>
+    </div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div class="card step-panel hidden" id="step-3">
+    <h2>Documents &amp; Attachments</h2>
+    <p class="small-note">Attach reference documents such as Technical Data Sheets, Safety Data Sheets, application guides, or certificates. You may attach a link/reference and optionally a small file.</p>
+    <div id="docsContainer"></div>
+    <button class="btn secondary no-print" id="btnAddDoc" style="margin-top:8px;">+ Add Document</button>
+    <div class="toolbar no-print" style="margin-top:18px;">
+      <button class="btn grey" id="backStep2">← Back</button>
+      <button class="btn secondary" id="btnSaveStep3">Save</button>
+      <button class="btn" id="btnFinish">Finish &amp; View Specification</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PREVIEW ============ -->
+<section id="view-preview" class="hidden">
+  <div class="toolbar no-print">
+    <button class="btn secondary" id="btnEditFromPreview">✎ Edit</button>
+    <button class="btn" id="btnPrint">🖨 Print / Save as PDF</button>
+    <button class="btn grey" id="btnExportJson">⬇ Export JSON</button>
+    <button class="btn grey" id="btnExportCsv">⬇ Export Coats CSV</button>
+    <div class="spacer"></div>
+    <button class="btn danger" id="btnDeleteSpec">🗑 Delete Specification</button>
+  </div>
+  <div id="previewContent"></div>
+</section>
+
+<!-- ============ PRODUCT LIBRARY ============ -->
+<section id="view-products" class="hidden">
+  <div class="card">
+    <div class="toolbar">
+      <h2 style="border:none;margin:0;">Product Library</h2>
+      <div class="spacer"></div>
+      <button class="btn" id="btnAddProduct">+ Add Product</button>
+    </div>
+    <p class="small-note">Products added here appear in the Product Name dropdown when building a coating system. Volume Solids and the Curing/Overcoat Interval note are pulled from whatever you enter here — source this from the product's own Technical Data Sheet (TDS).</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr id="productTableHead"></tr></thead>
+        <tbody id="productTableBody"></tbody>
+      </table>
+      <div class="empty-state hidden" id="productEmptyState">
+        <div class="big">🧪</div>
+        <div>No products in your library yet. Click "+ Add Product" to add one, sourced from its TDS.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="app-footer">C-SPEC — data is stored locally in this browser. Export JSON regularly to back up your specifications.</footer>
+
+<div class="modal-overlay hidden" id="confirmOverlay">
+  <div class="modal">
+    <h3 id="confirmTitle">Confirm</h3>
+    <div id="confirmMessage"></div>
+    <div class="actions">
+      <button class="btn grey" id="confirmCancelBtn">Cancel</button>
+      <button class="btn danger" id="confirmOkBtn">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  const STORAGE_KEY = "coatspec_specs_v1";
+
+  // ---------- CONFIRM MODAL (replaces window.confirm, which some embedded/sandboxed browsers block silently) ----------
+  const confirmOverlay = document.getElementById('confirmOverlay');
+  const confirmMessage = document.getElementById('confirmMessage');
+  const confirmOkBtn = document.getElementById('confirmOkBtn');
+  const confirmCancelBtn = document.getElementById('confirmCancelBtn');
+  let confirmResolver = null;
+  function confirmModal(message){
+    confirmMessage.textContent = message;
+    confirmOverlay.classList.remove('hidden');
+    return new Promise(resolve=>{ confirmResolver = resolve; });
+  }
+  function closeConfirmModal(result){
+    confirmOverlay.classList.add('hidden');
+    if(confirmResolver){ confirmResolver(result); confirmResolver = null; }
+  }
+  confirmOkBtn.addEventListener('click', ()=> closeConfirmModal(true));
+  confirmCancelBtn.addEventListener('click', ()=> closeConfirmModal(false));
+  confirmOverlay.addEventListener('click', (e)=>{ if(e.target===confirmOverlay) closeConfirmModal(false); });
+  let specs = [];
+  let currentId = null;
+
+  function uid(){ return 'S' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+  function todayISO(){ return new Date().toISOString().slice(0,10); }
+  function fmtDate(iso){ if(!iso) return '-'; const d=new Date(iso); return isNaN(d)?iso:d.toLocaleDateString(); }
+  function escapeHtml(s){ return (s==null?'':String(s)).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  function load(){
+    try{ specs = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }catch(e){ specs = []; }
+  }
+  function persist(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(specs)); }
+
+  function newSpec(){
+    return {
+      id: uid(),
+      title:"", project:"", customer:"", date: todayISO(),
+      category:"New Building / New Construction", asset:"Commercial",
+      corrosivity:"", durability:"", location:"", reference:"", version:"V01",
+      currency:"", preparedby:"", status:"Draft", remarks:"",
+      positions: [],
+      documents: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+  }
+  function newPosition(){
+    return {
+      id: uid(), name:"", area:"", substrate:"", surfacePrep:"", remarks:"",
+      coats: [ newCoat(1) ]
+    };
+  }
+  function newCoat(n){
+    return {
+      coatNo: n||1, product:"", genericType:"", color:"",
+      dft:"", volumeSolids:"", spreadRateTheor:"", lossPct:"", consumption:"",
+      application:"", curing:"", standard:""
+    };
+  }
+  function newDoc(){
+    return { id: uid(), type:"Technical Data Sheet", name:"", reference:"", fileData:"", fileName:"" };
+  }
+
+  function getSpec(id){ return specs.find(s=>s.id===id); }
+
+  // ---------- VIEW SWITCHING ----------
+  const views = { dashboard: document.getElementById('view-dashboard'), editor: document.getElementById('view-editor'), preview: document.getElementById('view-preview'), products: document.getElementById('view-products') };
+  function showView(name){
+    Object.keys(views).forEach(k=> views[k].classList.toggle('hidden', k!==name));
+    document.querySelectorAll('.tab-btn').forEach(b=> b.classList.toggle('active', b.dataset.view===name));
+    if(name==='dashboard') renderDashboard();
+    if(name==='preview') renderPreview();
+    if(name==='products') renderProducts();
+    updateHeaderMeta();
+  }
+  document.querySelectorAll('.tab-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      if(btn.dataset.view==='editor' && !currentId){ startNewSpec(); return; }
+      if(btn.dataset.view==='preview' && !currentId){ alert('Open or create a specification first.'); return; }
+      showView(btn.dataset.view);
+    });
+  });
+
+  function updateHeaderMeta(){
+    // header meta display removed
+  }
+
+  // ---------- DASHBOARD ----------
+  function renderDashboard(){
+    const q = document.getElementById('searchInput').value.trim().toLowerCase();
+    const statusFilter = document.getElementById('filterStatus').value;
+    const tbody = document.getElementById('specTableBody');
+    const filtered = specs.filter(s=>{
+      const matchesQ = !q || [s.title,s.customer,s.project,s.location].some(v=>(v||'').toLowerCase().includes(q));
+      const matchesStatus = !statusFilter || s.status===statusFilter;
+      return matchesQ && matchesStatus;
+    }).sort((a,b)=> new Date(b.updatedAt) - new Date(a.updatedAt));
+
+    document.getElementById('emptyState').classList.toggle('hidden', specs.length>0);
+    tbody.innerHTML = filtered.map(s=>`
+      <tr data-id="${s.id}">
+        <td><strong>${escapeHtml(s.title||'(untitled)')}</strong></td>
+        <td>${escapeHtml(s.customer||'-')}</td>
+        <td>${escapeHtml(s.project||'-')}</td>
+        <td>${escapeHtml(s.location||'-')}</td>
+        <td><span class="badge ${s.status==='Completed'?'completed':'draft'}">${s.status}</span></td>
+        <td>${fmtDate(s.updatedAt)}</td>
+        <td class="no-print">
+          <button class="btn sm secondary" data-act="open">Open</button>
+          <button class="btn sm grey" data-act="dup">Duplicate</button>
+          <button class="btn sm danger" data-act="del">Delete</button>
+        </td>
+      </tr>
+    `).join('');
+
+    tbody.querySelectorAll('tr').forEach(tr=>{
+      const id = tr.dataset.id;
+      tr.querySelector('[data-act="open"]').addEventListener('click', (e)=>{ e.stopPropagation(); openSpec(id); });
+      tr.querySelector('[data-act="dup"]').addEventListener('click', (e)=>{ e.stopPropagation(); duplicateSpec(id); });
+      tr.querySelector('[data-act="del"]').addEventListener('click', (e)=>{ e.stopPropagation(); deleteSpec(id); });
+      tr.addEventListener('click', ()=> openSpec(id));
+    });
+  }
+  document.getElementById('searchInput').addEventListener('input', renderDashboard);
+  document.getElementById('filterStatus').addEventListener('change', renderDashboard);
+
+  function duplicateSpec(id){
+    const s = getSpec(id); if(!s) return;
+    const copy = JSON.parse(JSON.stringify(s));
+    copy.id = uid(); copy.title = s.title + ' (Copy)'; copy.status='Draft';
+    copy.createdAt = new Date().toISOString(); copy.updatedAt = new Date().toISOString();
+    specs.push(copy); persist(); renderDashboard();
+  }
+  async function deleteSpec(id){
+    const ok = await confirmModal('Delete this specification? This cannot be undone.');
+    if(!ok) return;
+    specs = specs.filter(s=>s.id!==id); persist();
+    if(currentId===id){ currentId=null; showView('dashboard'); } else renderDashboard();
+  }
+  document.getElementById('btnDeleteSpec').addEventListener('click', ()=>{ if(currentId) deleteSpec(currentId); });
+
+  function openSpec(id){ currentId = id; loadEditorFromSpec(); showView('editor'); goToStep(1); }
+  function startNewSpec(){
+    const s = newSpec(); specs.push(s); currentId = s.id; persist();
+    loadEditorFromSpec(); showView('editor'); goToStep(1);
+  }
+  document.getElementById('btnNewSpec').addEventListener('click', startNewSpec);
+
+  // ---------- IMPORT / EXPORT ----------
+  document.getElementById('btnImport').addEventListener('click', ()=> document.getElementById('importFile').click());
+  document.getElementById('importFile').addEventListener('change', (e)=>{
+    const file = e.target.files[0]; if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      try{
+        const data = JSON.parse(reader.result);
+        const list = Array.isArray(data) ? data : [data];
+        list.forEach(sp=>{ sp.id = uid(); specs.push(sp); });
+        persist(); renderDashboard();
+        alert('Imported ' + list.length + ' specification(s).');
+      }catch(err){ alert('Invalid JSON file.'); }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  });
+
+  document.getElementById('btnExportJson').addEventListener('click', ()=>{
+    const s = getSpec(currentId); if(!s) return;
+    downloadFile((s.title||'specification').replace(/[^\w\-]+/g,'_') + '.json', JSON.stringify(s, null, 2), 'application/json');
+  });
+  document.getElementById('btnExportCsv').addEventListener('click', ()=>{
+    const s = getSpec(currentId); if(!s) return;
+    let rows = [["Position","Area (m2)","Coat No","Product","Color","DFT (µm)","Volume Solids (%)","Theor. Spread Rate (m2/L)","Loss (%)","Consumption (L/m2)","Total Consumption (L)"]];
+    s.positions.forEach(p=>{
+      p.coats.forEach(c=>{
+        rows.push([p.name,p.area,c.coatNo,c.product,c.color,c.dft,c.volumeSolids,c.spreadRateTheor,c.lossPct,c.consumption,c.totalConsumption]);
+      });
+    });
+    const csv = rows.map(r=> r.map(v=>`"${String(v==null?'':v).replace(/"/g,'""')}"`).join(',')).join('\n');
+    downloadFile((s.title||'specification').replace(/[^\w\-]+/g,'_') + '_coats.csv', csv, 'text/csv');
+  });
+  function downloadFile(name, content, type){
+    const blob = new Blob([content], {type});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = name; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // ---------- EDITOR: STEP NAV ----------
+  function goToStep(n){
+    document.querySelectorAll('.step-panel').forEach((p,i)=> p.classList.toggle('hidden', i!==(n-1)));
+    document.querySelectorAll('.steps .step').forEach(st=> st.classList.toggle('active', Number(st.dataset.step)===n));
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
+  document.querySelectorAll('.steps .step').forEach(st=> st.addEventListener('click', ()=> goToStep(Number(st.dataset.step))));
+  document.getElementById('toStep2').addEventListener('click', ()=>{ saveStep1(); renderPositions(); goToStep(2); });
+  document.getElementById('toStep3').addEventListener('click', ()=>{
+    saveStep2();
+    if(!validateRequiredCoatFields()) return;
+    renderDocs(); goToStep(3);
+  });
+  document.getElementById('backStep1').addEventListener('click', ()=> goToStep(1));
+  document.getElementById('backStep2').addEventListener('click', ()=> goToStep(2));
+  document.getElementById('btnSaveStep1').addEventListener('click', ()=>{ saveStep1(); alert('Saved.'); });
+  document.getElementById('btnSaveStep2').addEventListener('click', ()=>{ saveStep2(); alert('Saved.'); });
+  document.getElementById('btnSaveStep3').addEventListener('click', ()=>{ saveStep3(); alert('Saved.'); });
+  document.getElementById('btnFinish').addEventListener('click', ()=>{
+    saveStep3();
+    if(!validateRequiredCoatFields()) return;
+    showView('preview');
+  });
+  function validateRequiredCoatFields(){
+    const s = getSpec(currentId); if(!s) return true;
+    let missingCoatCount = 0;
+    let missingPositionCount = 0;
+    s.positions.forEach(p=>{
+      if(!String(p.area||'').trim()) missingPositionCount++;
+      if(!String(p.surfacePrep||'').trim()) missingPositionCount++;
+      p.coats.forEach(c=>{
+        REQUIRED_COAT_FIELDS.forEach(f=>{ if(!String(c[f[0]]||'').trim()) missingCoatCount++; });
+      });
+    });
+    if(missingCoatCount>0 || missingPositionCount>0){
+      renderPositions();
+      goToStep(2);
+      alert('Please fill in all required fields — Area to be Painted, Surface Preparation, DFT µm (dry), and Loss % — highlighted in red — before continuing.');
+      return false;
+    }
+    return true;
+  }
+  document.getElementById('btnEditFromPreview').addEventListener('click', ()=>{ showView('editor'); goToStep(1); });
+  document.getElementById('btnPrint').addEventListener('click', ()=> window.print());
+
+  // ---------- STEP 1 ----------
+  function loadEditorFromSpec(){
+    const s = getSpec(currentId); if(!s) return;
+    document.getElementById('f_title').value = s.title;
+    document.getElementById('f_project').value = s.project;
+    document.getElementById('f_customer').value = s.customer;
+    document.getElementById('f_date').value = s.date || todayISO();
+    document.getElementById('f_category').value = s.category;
+    document.getElementById('f_asset').value = s.asset;
+    document.getElementById('f_corrosivity').value = s.corrosivity;
+    document.getElementById('f_durability').value = s.durability;
+    document.getElementById('f_location').value = s.location;
+    document.getElementById('f_reference').value = s.reference;
+    document.getElementById('f_version').value = s.version;
+    document.getElementById('f_currency').value = s.currency;
+    document.getElementById('f_preparedby').value = s.preparedby;
+    document.getElementById('f_status').value = s.status;
+    document.getElementById('f_remarks').value = s.remarks;
+    renderPositions();
+    renderDocs();
+  }
+  function saveStep1(){
+    const s = getSpec(currentId); if(!s) return;
+    s.title = document.getElementById('f_title').value.trim();
+    s.project = document.getElementById('f_project').value.trim();
+    s.customer = document.getElementById('f_customer').value.trim();
+    s.date = document.getElementById('f_date').value;
+    s.category = document.getElementById('f_category').value;
+    s.asset = document.getElementById('f_asset').value;
+    s.corrosivity = document.getElementById('f_corrosivity').value;
+    s.durability = document.getElementById('f_durability').value;
+    s.location = document.getElementById('f_location').value.trim();
+    s.reference = document.getElementById('f_reference').value.trim();
+    s.version = document.getElementById('f_version').value.trim();
+    s.currency = document.getElementById('f_currency').value.trim();
+    s.preparedby = document.getElementById('f_preparedby').value.trim();
+    s.status = document.getElementById('f_status').value;
+    s.remarks = document.getElementById('f_remarks').value;
+    s.updatedAt = new Date().toISOString();
+    persist(); updateHeaderMeta();
+  }
+
+  // ---------- STEP 2: POSITIONS ----------
+  const COAT_FIELDS = [
+    ["coatNo","Coat #","number","60px",false],
+    ["product","Product Name","select","150px",false],
+    ["color","Color","text","90px",false],
+    ["dft","DFT µm (dry)","number","90px",true],
+    ["volumeSolids","Vol. Solids %","number","90px",false],
+    ["spreadRateTheor","Theor. Spread Rate (m²/L)","number","110px",false],
+    ["lossPct","Loss %","number","70px",true],
+    ["consumption","Consumption (L/m²)","number","100px",false],
+    ["totalConsumption","Total Consumption (L)","number","120px",false],
+  ];
+  const DERIVED_COAT_FIELDS = ["volumeSolids","spreadRateTheor","consumption","totalConsumption"];
+  const REQUIRED_COAT_FIELDS = COAT_FIELDS.filter(f=>f[4]);
+  const CUSTOM_PRODUCT_VALUE = "__custom__";
+
+  // ---------- PRODUCT LIBRARY (user-managed, stored locally — see "Product Library" tab) ----------
+  const PRODUCTS_STORAGE_KEY = "coatspec_products_v1";
+  let products = [];
+  function loadProducts(){
+    try{ products = JSON.parse(localStorage.getItem(PRODUCTS_STORAGE_KEY)) || []; }catch(e){ products = []; }
+    if(products.length===0){
+      // Seed with defaults sourced from each product's TDS, editable/removable in the Product Library tab.
+      products = [
+        { id: uid(), name: "Jotamastic 90", volumeSolids: 80, minDft: 100, maxDft: 300, minWft: 125, maxWft: 375, mixRatio: "3.5:1 by volume (Comp A : Comp B)", thinner: "Jotun Thinner No. 17", curing: "Min. 3 h @ 23°C (up to 30 h @ 0°C) — see Application Guide for max interval" },
+        { id: uid(), name: "Uniprime QD", volumeSolids: 38, minDft: 35, maxDft: 100, minWft: 95, maxWft: 260, mixRatio: "Single pack", thinner: "Jotun Thinner No. 7", curing: "Min. 2 h @ 23°C (up to 4 h @ 5°C) — see Application Guide for max interval" }
+      ];
+      persistProducts();
+    }
+  }
+  function persistProducts(){ localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(products)); }
+  function getProductByName(name){ return products.find(p=>p.name===name); }
+
+  // Theoretical spreading rate (m²/L) = Volume solids (%) x 10 / DFT (µm) — the standard TDS relationship,
+  // verified against each product's published spreading-rate range.
+  // Practical consumption (L/m²) factors in application loss.
+  function recalcCoatFromTds(coat){
+    const vs = parseFloat(coat.volumeSolids);
+    const dft = parseFloat(coat.dft);
+    if(vs>0 && dft>0){
+      const spreadRate = (vs*10)/dft;
+      coat.spreadRateTheor = String(Math.round(spreadRate*100)/100);
+      const loss = parseFloat(coat.lossPct);
+      if(loss>=0 && loss<100){
+        const consumption = (1/spreadRate) * (100/(100-loss));
+        coat.consumption = String(Math.round(consumption*100)/100);
+      }
+    }
+  }
+
+  // Total Consumption (L) = Consumption (L/m²) x Area to be Painted (m²)
+  function recalcTotalConsumption(coat, area){
+    const consumption = parseFloat(coat.consumption);
+    const areaNum = parseFloat(area);
+    if(consumption>0 && areaNum>0){
+      coat.totalConsumption = String(Math.round(consumption*areaNum*100)/100);
+    } else {
+      coat.totalConsumption = '';
+    }
+  }
+
+  function renderProductCell(c){
+    const isKnown = !!getProductByName(c.product);
+    const selectValue = c.product ? (isKnown ? c.product : CUSTOM_PRODUCT_VALUE) : "";
+    const showCustom = selectValue === CUSTOM_PRODUCT_VALUE;
+    return `<td>
+      <select data-field="product" data-role="product-select">
+        <option value="" ${selectValue===""?'selected':''}>-- Select product --</option>
+        ${products.map(p=>`<option value="${escapeHtml(p.name)}" ${selectValue===p.name?'selected':''}>${escapeHtml(p.name)}</option>`).join('')}
+        <option value="${CUSTOM_PRODUCT_VALUE}" ${showCustom?'selected':''}>Other / Custom...</option>
+      </select>
+      <input type="text" data-field="productCustom" data-role="product-custom" placeholder="Enter custom product name" value="${escapeHtml(showCustom?c.product:'')}" class="${showCustom?'':'hidden'}" style="margin-top:4px;">
+    </td>`;
+  }
+
+  function renderPositions(){
+    const s = getSpec(currentId); if(!s) return;
+    const container = document.getElementById('positionsContainer');
+    if(s.positions.length===0){
+      container.innerHTML = '<div class="empty-state"><div class="big">🧱</div>No positions added yet.</div>';
+      return;
+    }
+    container.innerHTML = s.positions.map((p,pi)=>`
+      <div class="position-block" data-pid="${p.id}">
+        <div class="position-header">
+          <input type="text" placeholder="Position / area name (e.g. Equipment, Carbon Steel Substrate C5-High)" data-field="name" value="${escapeHtml(p.name)}">
+          <div class="coat-actions no-print">
+            <button class="btn sm grey" data-act="moveup">↑</button>
+            <button class="btn sm grey" data-act="movedown">↓</button>
+            <button class="btn sm danger" data-act="removepos">Remove</button>
+          </div>
+        </div>
+        <div class="position-body">
+          <div class="row">
+            <div class="field"><label>Area to be Painted (m²) <span class="req">*</span></label><input type="number" data-field="area" required class="${!String(p.area||'').trim()?'field-missing':''}" value="${escapeHtml(p.area)}"></div>
+            <div class="field"><label>Substrate</label><input type="text" data-field="substrate" placeholder="e.g. Carbon Steel, Galvanized, Concrete" value="${escapeHtml(p.substrate)}"></div>
+          </div>
+          <div class="field"><label>Surface Preparation <span class="req">*</span></label><textarea data-field="surfacePrep" required class="${!String(p.surfacePrep||'').trim()?'field-missing':''}" placeholder="e.g. Abrasive blast clean to Sa 2½ (ISO 8501-1), profile 45-75 µm">${escapeHtml(p.surfacePrep)}</textarea></div>
+          <div class="field"><label>Remarks</label><textarea data-field="remarks" placeholder="Guarantee eligibility, special notes...">${escapeHtml(p.remarks)}</textarea></div>
+
+          <h3 style="margin-top:10px;">Coating System (Coats)</h3>
+          <div class="table-wrap">
+            <table>
+              <thead><tr>
+                ${COAT_FIELDS.map(f=>`<th style="min-width:${f[3]}">${f[1]}${f[4]?' <span class="req">*</span>':''}</th>`).join('')}
+              </tr></thead>
+              <tbody>
+                ${p.coats.map((c,ci)=>`
+                  <tr data-ci="${ci}">
+                    ${COAT_FIELDS.map(f=> f[0]==='product' ? renderProductCell(c) : `<td><input type="${f[2]}" data-field="${f[0]}" ${f[4]?'required':''} ${DERIVED_COAT_FIELDS.includes(f[0])?'readonly':''} class="${f[4] && !String(c[f[0]]||'').trim() ? 'field-missing':''} ${DERIVED_COAT_FIELDS.includes(f[0])?'derived-field':''}" value="${escapeHtml(c[f[0]])}"></td>`).join('')}
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+          <div class="toolbar no-print" style="margin-top:8px;margin-bottom:0;">
+            <button class="btn sm secondary" data-act="addcoat">+ Add Coat</button>
+            <select data-act="removecoatselect" ${p.coats.length<=1?'disabled':''} style="max-width:220px;">
+              ${p.coats.map((c,ci)=>`<option value="${ci}">Coat ${c.coatNo || (ci+1)}${c.product? ' - '+escapeHtml(c.product):''}</option>`).join('')}
+            </select>
+            <button class="btn sm danger" data-act="removecoat" ${p.coats.length<=1?'disabled':''}>- Remove Coat</button>
+          </div>
+        </div>
+      </div>
+    `).join('');
+
+    // Bind events per position
+    container.querySelectorAll('.position-block').forEach(block=>{
+      const pid = block.dataset.pid;
+      const pos = s.positions.find(p=>p.id===pid);
+
+      block.querySelectorAll('[data-field]:not([data-role])').forEach(input=>{
+        input.addEventListener('input', ()=>{
+          const row = input.closest('tr[data-ci]');
+          if(row){
+            const ci = Number(row.dataset.ci);
+            const coat = pos.coats[ci];
+            coat[input.dataset.field] = input.value;
+            if(input.hasAttribute('required')) input.classList.toggle('field-missing', !input.value.trim());
+            if(input.dataset.field==='dft' || input.dataset.field==='lossPct' || input.dataset.field==='volumeSolids'){
+              recalcCoatFromTds(coat);
+              recalcTotalConsumption(coat, pos.area);
+              const spreadInput = row.querySelector('[data-field="spreadRateTheor"]');
+              const consumptionInput = row.querySelector('[data-field="consumption"]');
+              const totalInput = row.querySelector('[data-field="totalConsumption"]');
+              if(spreadInput && document.activeElement!==spreadInput) spreadInput.value = coat.spreadRateTheor;
+              if(consumptionInput && document.activeElement!==consumptionInput) consumptionInput.value = coat.consumption;
+              if(totalInput) totalInput.value = coat.totalConsumption;
+            }
+          } else {
+            pos[input.dataset.field] = input.value;
+            if(input.dataset.field==='area'){
+              pos.coats.forEach(coat=>{
+                recalcTotalConsumption(coat, pos.area);
+                const coatIdx = pos.coats.indexOf(coat);
+                const totalInput = block.querySelector(`tr[data-ci="${coatIdx}"] [data-field="totalConsumption"]`);
+                if(totalInput) totalInput.value = coat.totalConsumption;
+              });
+            }
+          }
+          persist();
+        });
+      });
+
+      block.querySelectorAll('[data-role="product-select"]').forEach(select=>{
+        select.addEventListener('change', ()=>{
+          const row = select.closest('tr[data-ci]');
+          const ci = Number(row.dataset.ci);
+          const custom = row.querySelector('[data-role="product-custom"]');
+          if(select.value === CUSTOM_PRODUCT_VALUE){
+            custom.classList.remove('hidden');
+            custom.value = '';
+            const coat = pos.coats[ci];
+            coat.product = '';
+            coat.volumeSolids = ''; coat.spreadRateTheor = ''; coat.consumption = ''; coat.totalConsumption = ''; coat.curing = '';
+            persist();
+            renderPositions();
+            const newCustom = document.querySelector(`.position-block[data-pid="${pid}"] tr[data-ci="${ci}"] [data-role="product-custom"]`);
+            if(newCustom) newCustom.focus();
+          } else {
+            custom.classList.add('hidden');
+            custom.value = '';
+            const coat = pos.coats[ci];
+            coat.product = select.value;
+            const productData = getProductByName(select.value);
+            if(productData){
+              coat.volumeSolids = String(productData.volumeSolids);
+              coat.curing = productData.curing;
+              recalcCoatFromTds(coat);
+              recalcTotalConsumption(coat, pos.area);
+            }
+            persist();
+            renderPositions();
+          }
+        });
+      });
+      block.querySelectorAll('[data-role="product-custom"]').forEach(input=>{
+        input.addEventListener('input', ()=>{
+          const row = input.closest('tr[data-ci]');
+          const ci = Number(row.dataset.ci);
+          pos.coats[ci].product = input.value;
+          persist();
+        });
+      });
+
+      block.querySelector('[data-act="removepos"]').addEventListener('click', async ()=>{
+        const ok = await confirmModal('Remove this position and all its coats?');
+        if(!ok) return;
+        s.positions = s.positions.filter(p=>p.id!==pid); persist(); renderPositions();
+      });
+      block.querySelector('[data-act="moveup"]').addEventListener('click', ()=>{
+        const idx = s.positions.findIndex(p=>p.id===pid);
+        if(idx>0){ [s.positions[idx-1],s.positions[idx]]=[s.positions[idx],s.positions[idx-1]]; persist(); renderPositions(); }
+      });
+      block.querySelector('[data-act="movedown"]').addEventListener('click', ()=>{
+        const idx = s.positions.findIndex(p=>p.id===pid);
+        if(idx<s.positions.length-1){ [s.positions[idx+1],s.positions[idx]]=[s.positions[idx],s.positions[idx+1]]; persist(); renderPositions(); }
+      });
+      block.querySelector('[data-act="addcoat"]').addEventListener('click', ()=>{
+        pos.coats.push(newCoat(pos.coats.length+1)); persist(); renderPositions();
+      });
+      const removeCoatBtn = block.querySelector('[data-act="removecoat"]');
+      const removeCoatSelect = block.querySelector('[data-act="removecoatselect"]');
+      if(removeCoatBtn && removeCoatSelect){
+        removeCoatBtn.addEventListener('click', ()=>{
+          if(pos.coats.length<=1) return;
+          const idx = Number(removeCoatSelect.value);
+          pos.coats.splice(idx,1);
+          persist(); renderPositions();
+        });
+      }
+    });
+  }
+
+  document.getElementById('btnAddPosition').addEventListener('click', ()=>{
+    const s = getSpec(currentId); if(!s) return;
+    s.positions.push(newPosition()); persist(); renderPositions();
+  });
+  function saveStep2(){
+    const s = getSpec(currentId); if(!s) return;
+    s.updatedAt = new Date().toISOString(); persist(); updateHeaderMeta();
+  }
+
+  // ---------- STEP 3: DOCUMENTS ----------
+  const DOC_TYPES = ["Technical Data Sheet","Safety Data Sheet","Application Guide","Certificate / Approval","Warranty Document","Other"];
+  function renderDocs(){
+    const s = getSpec(currentId); if(!s) return;
+    const container = document.getElementById('docsContainer');
+    if(s.documents.length===0){
+      container.innerHTML = '<div class="empty-state"><div class="big">📎</div>No documents attached yet.</div>';
+      return;
+    }
+    container.innerHTML = s.documents.map((d,i)=>`
+      <div class="doc-row" data-did="${d.id}">
+        <div class="field" style="flex:0 0 180px;margin-bottom:0;">
+          <label>Type</label>
+          <select data-field="type">
+            ${DOC_TYPES.map(t=>`<option ${t===d.type?'selected':''}>${t}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field grow" style="margin-bottom:0;"><label>Name / Description</label><input type="text" data-field="name" value="${escapeHtml(d.name)}" placeholder="e.g. TDS - Epoxy Primer 90"></div>
+        <div class="field grow" style="margin-bottom:0;"><label>Link / Reference</label><input type="text" data-field="reference" value="${escapeHtml(d.reference)}" placeholder="URL or file reference"></div>
+        <div class="field" style="flex:0 0 200px;margin-bottom:0;">
+          <label>Attach File (optional, small files)</label>
+          <input type="file" data-act="filepick">
+          <div class="hint">${d.fileName? '📄 '+escapeHtml(d.fileName) : ''}</div>
+        </div>
+        <button class="btn sm danger no-print" data-act="removedoc">✕</button>
+      </div>
+    `).join('');
+
+    container.querySelectorAll('.doc-row').forEach(row=>{
+      const did = row.dataset.did;
+      const doc = s.documents.find(d=>d.id===did);
+      row.querySelectorAll('[data-field]').forEach(input=>{
+        input.addEventListener('input', ()=>{ doc[input.dataset.field] = input.value; persist(); });
+      });
+      row.querySelector('[data-act="removedoc"]').addEventListener('click', ()=>{
+        s.documents = s.documents.filter(d=>d.id!==did); persist(); renderDocs();
+      });
+      const filePick = row.querySelector('[data-act="filepick"]');
+      filePick.addEventListener('change', ()=>{
+        const file = filePick.files[0]; if(!file) return;
+        if(file.size > 1.5*1024*1024){ alert('File too large for local storage (max ~1.5MB). Please use a Link/Reference instead.'); filePick.value=''; return; }
+        const reader = new FileReader();
+        reader.onload = ()=>{ doc.fileData = reader.result; doc.fileName = file.name; persist(); renderDocs(); };
+        reader.readAsDataURL(file);
+      });
+    });
+  }
+  document.getElementById('btnAddDoc').addEventListener('click', ()=>{
+    const s = getSpec(currentId); if(!s) return;
+    s.documents.push(newDoc()); persist(); renderDocs();
+  });
+  function saveStep3(){
+    const s = getSpec(currentId); if(!s) return;
+    s.status = 'Completed';
+    s.updatedAt = new Date().toISOString(); persist(); updateHeaderMeta();
+  }
+
+  // ---------- PREVIEW ----------
+  function renderPreview(){
+    const s = getSpec(currentId); if(!s) return;
+    const el = document.getElementById('previewContent');
+    el.innerHTML = `
+      <div class="card">
+        <h2>${escapeHtml(s.title || '(untitled specification)')}</h2>
+        <div class="row">
+          <div class="field"><label>Project</label><div>${escapeHtml(s.project||'-')}</div></div>
+          <div class="field"><label>Customer</label><div>${escapeHtml(s.customer||'-')}</div></div>
+          <div class="field"><label>Date</label><div>${fmtDate(s.date)}</div></div>
+          <div class="field"><label>Version</label><div>${escapeHtml(s.version||'-')}</div></div>
+        </div>
+        <div class="row">
+          <div class="field"><label>Category of Usage</label><div>${escapeHtml(s.category||'-')}</div></div>
+          <div class="field"><label>Asset Type</label><div>${escapeHtml(s.asset||'-')}</div></div>
+          <div class="field"><label>Corrosivity Category</label><div>${escapeHtml(s.corrosivity||'-')}</div></div>
+          <div class="field"><label>Durability Range</label><div>${escapeHtml(s.durability||'-')}</div></div>
+        </div>
+        <div class="row">
+          <div class="field"><label>Location</label><div>${escapeHtml(s.location||'-')}</div></div>
+          <div class="field"><label>Reference</label><div>${escapeHtml(s.reference||'-')}</div></div>
+          <div class="field"><label>Currency</label><div>${escapeHtml(s.currency||'-')}</div></div>
+          <div class="field"><label>Status</label><div><span class="badge ${s.status==='Completed'?'completed':'draft'}">${s.status}</span></div></div>
+        </div>
+        ${s.remarks? `<div class="field"><label>Remarks</label><div>${escapeHtml(s.remarks).replace(/\n/g,'<br>')}</div></div>`:''}
+      </div>
+
+      ${s.positions.map(p=>`
+        <div class="card">
+          <h3>${escapeHtml(p.name||'(unnamed position)')}</h3>
+          <div class="row">
+            <div class="field"><label>Area to be Painted</label><div>${escapeHtml(p.area||'-')} m²</div></div>
+            <div class="field"><label>Substrate</label><div>${escapeHtml(p.substrate||'-')}</div></div>
+          </div>
+          ${p.surfacePrep? `<div class="field"><label>Surface Preparation</label><div>${escapeHtml(p.surfacePrep).replace(/\n/g,'<br>')}</div></div>`:''}
+          ${p.remarks? `<div class="field"><label>Remarks</label><div>${escapeHtml(p.remarks).replace(/\n/g,'<br>')}</div></div>`:''}
+          <div class="table-wrap">
+            <table>
+              <thead><tr>${COAT_FIELDS.map(f=>`<th>${f[1]}</th>`).join('')}</tr></thead>
+              <tbody>
+                ${p.coats.map(c=>`<tr>${COAT_FIELDS.map(f=>`<td>${escapeHtml(c[f[0]])||'-'}</td>`).join('')}</tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `).join('')}
+
+      ${s.documents.length? `
+        <div class="card">
+          <h3>Documents &amp; Attachments</h3>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Type</th><th>Name</th><th>Link / Reference</th><th>File</th></tr></thead>
+              <tbody>
+                ${s.documents.map(d=>`
+                  <tr>
+                    <td>${escapeHtml(d.type)}</td>
+                    <td>${escapeHtml(d.name)||'-'}</td>
+                    <td>${d.reference? `<a href="${escapeHtml(d.reference)}" target="_blank" rel="noopener">${escapeHtml(d.reference)}</a>`:'-'}</td>
+                    <td>${d.fileData? `<a href="${d.fileData}" download="${escapeHtml(d.fileName)}">${escapeHtml(d.fileName)}</a>`:'-'}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `:''}
+    `;
+  }
+
+  // ---------- PRODUCT LIBRARY ----------
+  const PRODUCT_FIELDS = [
+    ["name","Product Name","text","160px","e.g. Jotamastic 90"],
+    ["volumeSolids","Vol. Solids %","number","100px","e.g. 80"],
+    ["minDft","Min DFT (µm)","number","90px","e.g. 100"],
+    ["maxDft","Max DFT (µm)","number","90px","e.g. 300"],
+    ["minWft","Min WFT (µm)","number","90px","e.g. 125"],
+    ["maxWft","Max WFT (µm)","number","90px","e.g. 375"],
+    ["mixRatio","Mix Ratio","text","110px","e.g. 3.5:1 by volume"],
+    ["thinner","Thinner","text","140px","e.g. Jotun Thinner No. 17"],
+  ];
+  function renderProducts(){
+    const thead = document.getElementById('productTableHead');
+    thead.innerHTML = PRODUCT_FIELDS.map(f=>`<th style="min-width:${f[3]}">${f[1]}</th>`).join('') + `<th class="no-print">Actions</th>`;
+
+    const tbody = document.getElementById('productTableBody');
+    document.getElementById('productEmptyState').classList.toggle('hidden', products.length>0);
+    const sortedProducts = [...products].sort((a,b)=> String(a.name||'').localeCompare(String(b.name||''), undefined, {sensitivity:'base'}));
+    tbody.innerHTML = sortedProducts.map(p=>`
+      <tr data-pid="${p.id}" class="${p.locked?'row-locked':''}">
+        ${PRODUCT_FIELDS.map(f=>`<td><input type="${f[2]}" data-field="${f[0]}" ${p.locked?'readonly':''} class="${p.locked?'derived-field':''}" value="${escapeHtml(p[f[0]])}" placeholder="${f[4]}"></td>`).join('')}
+        <td class="no-print">
+          <button class="btn sm danger" data-act="delproduct" ${p.locked?'disabled':''}>Delete</button>
+          <button class="btn sm ${p.locked?'amber':'grey'}" data-act="togglelock">${p.locked?'🔒 Locked':'🔓 Unlocked'}</button>
+        </td>
+      </tr>
+    `).join('');
+
+    tbody.querySelectorAll('tr').forEach(tr=>{
+      const pid = tr.dataset.pid;
+      const product = products.find(p=>p.id===pid);
+      tr.querySelectorAll('[data-field]').forEach(input=>{
+        input.addEventListener('input', ()=>{
+          product[input.dataset.field] = input.value;
+          persistProducts();
+        });
+      });
+      tr.querySelector('[data-act="delproduct"]').addEventListener('click', async ()=>{
+        if(product.locked) return;
+        const ok = await confirmModal(`Remove "${product.name || '(unnamed product)'}" from the product library? Coats already using it keep their saved values, but it will no longer appear in the dropdown.`);
+        if(!ok) return;
+        products = products.filter(p=>p.id!==pid);
+        persistProducts();
+        renderProducts();
+      });
+      tr.querySelector('[data-act="togglelock"]').addEventListener('click', ()=>{
+        product.locked = !product.locked;
+        persistProducts();
+        renderProducts();
+      });
+    });
+  }
+  document.getElementById('btnAddProduct').addEventListener('click', ()=>{
+    const blank = { id: uid() };
+    PRODUCT_FIELDS.forEach(f=> blank[f[0]] = "");
+    products.push(blank);
+    persistProducts();
+    renderProducts();
+  });
+
+  // ---------- INIT ----------
+  load();
+  loadProducts();
+  showView('dashboard');
+})();
+</script>
+</body>
+</html>
