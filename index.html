@@ -300,7 +300,7 @@
 
 </main>
 
-<footer class="app-footer">C-SPEC — data is stored locally in this browser. Export JSON regularly to back up your specifications.</footer>
+<footer class="app-footer">C-SPEC — data syncs to a shared Supabase workspace (with a local browser copy as backup). <span id="syncStatus"></span></footer>
 
 <div class="modal-overlay hidden" id="confirmOverlay">
   <div class="modal">
@@ -313,9 +313,54 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (function(){
   "use strict";
+
+  // ---------- SUPABASE (shared workspace, no login — see project chat for setup) ----------
+  const SUPABASE_URL = "https://udlvibiuiuepzfxvatwe.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_As0ky10i7k7HFeQzqQTHlg_ZbzN83C_";
+  const sb = (window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY)
+    ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+    : null;
+
+  const syncStatusEl_ready = () => document.getElementById('syncStatus');
+  function setSyncStatus(text, isError){
+    const el = syncStatusEl_ready();
+    if(!el) return;
+    el.textContent = text;
+    el.style.color = isError ? 'var(--red)' : 'var(--muted)';
+  }
+
+  async function fetchRemote(id){
+    if(!sb) return null;
+    try{
+      const { data, error } = await sb.from('app_data').select('data').eq('id', id).single();
+      if(error) throw error;
+      return data ? data.data : null;
+    }catch(e){
+      console.warn('Supabase fetch failed for', id, e);
+      return null;
+    }
+  }
+
+  const _pushTimers = {};
+  function pushRemote(id, value){
+    if(!sb) return;
+    setSyncStatus('Syncing…');
+    clearTimeout(_pushTimers[id]);
+    _pushTimers[id] = setTimeout(async ()=>{
+      try{
+        const { error } = await sb.from('app_data').upsert({ id, data: value, updated_at: new Date().toISOString() });
+        if(error) throw error;
+        setSyncStatus('Synced to Supabase');
+      }catch(e){
+        console.warn('Supabase sync failed for', id, e);
+        setSyncStatus('Sync failed — saved locally only', true);
+      }
+    }, 600);
+  }
 
   const STORAGE_KEY = "coatspec_specs_v1";
 
@@ -345,10 +390,21 @@
   function fmtDate(iso){ if(!iso) return '-'; const d=new Date(iso); return isNaN(d)?iso:d.toLocaleDateString(); }
   function escapeHtml(s){ return (s==null?'':String(s)).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-  function load(){
+  async function load(){
     try{ specs = JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }catch(e){ specs = []; }
+    const remote = await fetchRemote('specs');
+    if(remote){
+      specs = remote;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(specs));
+      setSyncStatus('Synced to Supabase');
+    } else if(sb){
+      setSyncStatus('Sync failed — showing locally saved data', true);
+    }
   }
-  function persist(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(specs)); }
+  function persist(){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(specs));
+    pushRemote('specs', specs);
+  }
 
   function newSpec(){
     return {
@@ -611,8 +667,15 @@
   // ---------- PRODUCT LIBRARY (user-managed, stored locally — see "Product Library" tab) ----------
   const PRODUCTS_STORAGE_KEY = "coatspec_products_v1";
   let products = [];
-  function loadProducts(){
+  async function loadProducts(){
     try{ products = JSON.parse(localStorage.getItem(PRODUCTS_STORAGE_KEY)) || []; }catch(e){ products = []; }
+    const remote = await fetchRemote('products');
+    if(remote && remote.length>0){
+      products = remote;
+      localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(products));
+    } else if(sb && remote===null){
+      setSyncStatus('Sync failed — showing locally saved data', true);
+    }
     if(products.length===0){
       // Seed with defaults sourced from each product's TDS, editable/removable in the Product Library tab.
       products = [
@@ -622,7 +685,10 @@
       persistProducts();
     }
   }
-  function persistProducts(){ localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(products)); }
+  function persistProducts(){
+    localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(products));
+    pushRemote('products', products);
+  }
   function getProductByName(name){ return products.find(p=>p.name===name); }
 
   // Theoretical spreading rate (m²/L) = Volume solids (%) x 10 / DFT (µm) — the standard TDS relationship,
@@ -1024,9 +1090,11 @@
   });
 
   // ---------- INIT ----------
-  load();
-  loadProducts();
-  showView('dashboard');
+  (async ()=>{
+    setSyncStatus(sb ? 'Loading…' : '');
+    await Promise.all([load(), loadProducts()]);
+    showView('dashboard');
+  })();
 })();
 </script>
 </body>
