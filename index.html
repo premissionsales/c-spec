@@ -728,7 +728,7 @@
     return `<td>
       <select data-field="product" data-role="product-select">
         <option value="" ${selectValue===""?'selected':''}>-- Select product --</option>
-        ${products.map(p=>`<option value="${escapeHtml(p.name)}" ${selectValue===p.name?'selected':''}>${escapeHtml(p.name)}</option>`).join('')}
+        ${[...products].sort((a,b)=> String(a.name||'').localeCompare(String(b.name||''), undefined, {sensitivity:'base'})).map(p=>`<option value="${escapeHtml(p.name)}" ${selectValue===p.name?'selected':''}>${escapeHtml(p.name)}</option>`).join('')}
         <option value="${CUSTOM_PRODUCT_VALUE}" ${showCustom?'selected':''}>Other / Custom...</option>
       </select>
       <input type="text" data-field="productCustom" data-role="product-custom" placeholder="Enter custom product name" value="${escapeHtml(showCustom?c.product:'')}" class="${showCustom?'':'hidden'}" style="margin-top:4px;">
