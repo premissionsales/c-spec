@@ -247,6 +247,7 @@
     </div>
     <p class="small-note">Add one or more positions (areas / substrates). Each position holds a full coating system made of any number of coats — flexible for primer, stripe coat, intermediate, topcoat, or custom layers.</p>
     <div id="positionsContainer"></div>
+    <datalist id="productDatalist"></datalist>
     <div class="toolbar no-print" style="margin-top:6px;">
       <button class="btn grey" id="backStep1">← Back</button>
       <button class="btn secondary" id="btnSaveStep2">Save</button>
@@ -667,7 +668,6 @@
   ];
   const DERIVED_COAT_FIELDS = ["volumeSolids","spreadRateTheor","consumption","totalConsumption"];
   const REQUIRED_COAT_FIELDS = COAT_FIELDS.filter(f=>f[4]);
-  const CUSTOM_PRODUCT_VALUE = "__custom__";
 
   // ---------- PRODUCT LIBRARY (user-managed, stored locally — see "Product Library" tab) ----------
   const PRODUCTS_STORAGE_KEY = "coatspec_products_v1";
@@ -725,21 +725,21 @@
   }
 
   function renderProductCell(c){
-    const isKnown = !!getProductByName(c.product);
-    const selectValue = c.product ? (isKnown ? c.product : CUSTOM_PRODUCT_VALUE) : "";
-    const showCustom = selectValue === CUSTOM_PRODUCT_VALUE;
     return `<td>
-      <select data-field="product" data-role="product-select">
-        <option value="" ${selectValue===""?'selected':''}>-- Select product --</option>
-        ${[...products].sort((a,b)=> String(a.name||'').localeCompare(String(b.name||''), undefined, {sensitivity:'base'})).map(p=>`<option value="${escapeHtml(p.name)}" ${selectValue===p.name?'selected':''}>${escapeHtml(p.name)}</option>`).join('')}
-        <option value="${CUSTOM_PRODUCT_VALUE}" ${showCustom?'selected':''}>Other / Custom...</option>
-      </select>
-      <input type="text" data-field="productCustom" data-role="product-custom" placeholder="Enter custom product name" value="${escapeHtml(showCustom?c.product:'')}" class="${showCustom?'':'hidden'}" style="margin-top:4px;">
+      <input type="text" data-field="product" data-role="product-search" list="productDatalist" autocomplete="off" placeholder="Type to search products..." value="${escapeHtml(c.product)}">
     </td>`;
+  }
+
+  function renderProductDatalist(){
+    const datalist = document.getElementById('productDatalist');
+    if(!datalist) return;
+    const sorted = [...products].sort((a,b)=> String(a.name||'').localeCompare(String(b.name||''), undefined, {sensitivity:'base'}));
+    datalist.innerHTML = sorted.map(p=>`<option value="${escapeHtml(p.name)}"></option>`).join('');
   }
 
   function renderPositions(){
     const s = getSpec(currentId); if(!s) return;
+    renderProductDatalist();
     const container = document.getElementById('positionsContainer');
     if(s.positions.length===0){
       container.innerHTML = '<div class="empty-state"><div class="big">🧱</div>No positions added yet.</div>';
@@ -827,44 +827,29 @@
         });
       });
 
-      block.querySelectorAll('[data-role="product-select"]').forEach(select=>{
-        select.addEventListener('change', ()=>{
-          const row = select.closest('tr[data-ci]');
-          const ci = Number(row.dataset.ci);
-          const custom = row.querySelector('[data-role="product-custom"]');
-          if(select.value === CUSTOM_PRODUCT_VALUE){
-            custom.classList.remove('hidden');
-            custom.value = '';
-            const coat = pos.coats[ci];
-            coat.product = '';
-            coat.volumeSolids = ''; coat.spreadRateTheor = ''; coat.consumption = ''; coat.totalConsumption = ''; coat.curing = '';
-            persist();
-            renderPositions();
-            const newCustom = document.querySelector(`.position-block[data-pid="${pid}"] tr[data-ci="${ci}"] [data-role="product-custom"]`);
-            if(newCustom) newCustom.focus();
-          } else {
-            custom.classList.add('hidden');
-            custom.value = '';
-            const coat = pos.coats[ci];
-            coat.product = select.value;
-            const productData = getProductByName(select.value);
-            if(productData){
-              coat.volumeSolids = String(productData.volumeSolids);
-              coat.curing = productData.curing;
-              recalcCoatFromTds(coat);
-              recalcTotalConsumption(coat, pos.area);
-            }
-            persist();
-            renderPositions();
-          }
-        });
-      });
-      block.querySelectorAll('[data-role="product-custom"]').forEach(input=>{
+      block.querySelectorAll('[data-role="product-search"]').forEach(input=>{
         input.addEventListener('input', ()=>{
           const row = input.closest('tr[data-ci]');
           const ci = Number(row.dataset.ci);
           pos.coats[ci].product = input.value;
           persist();
+        });
+        input.addEventListener('change', ()=>{
+          const row = input.closest('tr[data-ci]');
+          const ci = Number(row.dataset.ci);
+          const coat = pos.coats[ci];
+          coat.product = input.value;
+          const productData = getProductByName(input.value);
+          if(productData){
+            coat.volumeSolids = String(productData.volumeSolids);
+            coat.curing = productData.curing;
+            recalcCoatFromTds(coat);
+            recalcTotalConsumption(coat, pos.area);
+            persist();
+            renderPositions();
+          } else {
+            persist();
+          }
         });
       });
 
