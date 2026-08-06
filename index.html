@@ -55,11 +55,11 @@
   table th{background:var(--blue-light);color:var(--navy);text-align:left;padding:8px;border:1px solid var(--border);font-size:12px;white-space:nowrap;}
   table td{padding:6px 8px;border:1px solid var(--border);vertical-align:middle;}
   table td input, table td select{width:100%;min-width:70px;padding:5px 6px;font-size:12.5px;}
-  #productTableBody input{text-align:center;}
-  #productTableHead th{text-align:center;}
-  #productTableBody input[type="number"]::-webkit-outer-spin-button,
-  #productTableBody input[type="number"]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
-  #productTableBody input[type="number"]{-moz-appearance:textfield;appearance:textfield;}
+  #productLibraryContainer input{text-align:center;}
+  #productLibraryContainer thead th{text-align:center;}
+  #productLibraryContainer input[type="number"]::-webkit-outer-spin-button,
+  #productLibraryContainer input[type="number"]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+  #productLibraryContainer input[type="number"]{-moz-appearance:textfield;appearance:textfield;}
   table td input.field-missing{border-color:var(--red);background:#fdeceb;}
   input.field-missing, textarea.field-missing{border-color:var(--red);background:#fdeceb;}
   input.derived-field{background:#eef1f5;color:var(--muted);cursor:not-allowed;}
@@ -284,24 +284,9 @@
 
 <!-- ============ PRODUCT LIBRARY ============ -->
 <section id="view-products" class="hidden">
-  <div class="card">
-    <div class="toolbar">
-      <h2 style="border:none;margin:0;">Product Library</h2>
-      <div class="spacer"></div>
-      <button class="btn" id="btnAddProduct">+ Add Product</button>
-    </div>
-    <p class="small-note">Products added here appear in the Product Name dropdown when building a coating system. Volume Solids and the Curing/Overcoat Interval note are pulled from whatever you enter here — source this from the product's own Technical Data Sheet (TDS).</p>
-    <div class="table-wrap">
-      <table>
-        <thead><tr id="productTableHead"></tr></thead>
-        <tbody id="productTableBody"></tbody>
-      </table>
-      <div class="empty-state hidden" id="productEmptyState">
-        <div class="big">🧪</div>
-        <div>No products in your library yet. Click "+ Add Product" to add one, sourced from its TDS.</div>
-      </div>
-    </div>
-  </div>
+  <h2 style="color:var(--navy);margin:0 0 4px;">Product Library</h2>
+  <p class="small-note" style="margin:0 0 16px;">Products added here appear in the Product Name search field when building a coating system. Volume Solids and the Curing/Overcoat Interval note are pulled from whatever you enter here — source this from the product's own Technical Data Sheet (TDS). Products are grouped below by brand.</p>
+  <div id="productLibraryContainer"></div>
 </section>
 
 </main>
@@ -671,6 +656,7 @@
 
   // ---------- PRODUCT LIBRARY (user-managed, stored locally — see "Product Library" tab) ----------
   const PRODUCTS_STORAGE_KEY = "coatspec_products_v1";
+  const BRANDS = ["Jotun", "Nippon"];
   let products = [];
   async function loadProducts(){
     try{ products = JSON.parse(localStorage.getItem(PRODUCTS_STORAGE_KEY)) || []; }catch(e){ products = []; }
@@ -684,11 +670,15 @@
     if(products.length===0){
       // Seed with defaults sourced from each product's TDS, editable/removable in the Product Library tab.
       products = [
-        { id: uid(), name: "Jotamastic 90", volumeSolids: 80, minDft: 100, maxDft: 300, minWft: 125, maxWft: 375, mixRatio: "3.5:1 by volume (Comp A : Comp B)", thinner: "Jotun Thinner No. 17", curing: "Min. 3 h @ 23°C (up to 30 h @ 0°C) — see Application Guide for max interval" },
-        { id: uid(), name: "Uniprime QD", volumeSolids: 38, minDft: 35, maxDft: 100, minWft: 95, maxWft: 260, mixRatio: "Single pack", thinner: "Jotun Thinner No. 7", curing: "Min. 2 h @ 23°C (up to 4 h @ 5°C) — see Application Guide for max interval" }
+        { id: uid(), brand: "Jotun", name: "Jotamastic 90", volumeSolids: 80, minDft: 100, maxDft: 300, minWft: 125, maxWft: 375, mixRatio: "3.5:1 by volume (Comp A : Comp B)", thinner: "Jotun Thinner No. 17", curing: "Min. 3 h @ 23°C (up to 30 h @ 0°C) — see Application Guide for max interval" },
+        { id: uid(), brand: "Jotun", name: "Uniprime QD", volumeSolids: 38, minDft: 35, maxDft: 100, minWft: 95, maxWft: 260, mixRatio: "Single pack", thinner: "Jotun Thinner No. 7", curing: "Min. 2 h @ 23°C (up to 4 h @ 5°C) — see Application Guide for max interval" }
       ];
       persistProducts();
     }
+    // Migrate pre-existing products (added before brands existed) — all were Jotun products.
+    let migrated = false;
+    products.forEach(p=>{ if(!p.brand){ p.brand = "Jotun"; migrated = true; } });
+    if(migrated) persistProducts();
   }
   function persistProducts(){
     localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(products));
@@ -1031,53 +1021,79 @@
     ["thinner","Thinner","text","140px","e.g. Jotun Thinner No. 17"],
   ];
   function renderProducts(){
-    const thead = document.getElementById('productTableHead');
-    thead.innerHTML = PRODUCT_FIELDS.map(f=>`<th style="min-width:${f[3]}">${f[1]}</th>`).join('') + `<th class="no-print">Actions</th>`;
-
-    const tbody = document.getElementById('productTableBody');
-    document.getElementById('productEmptyState').classList.toggle('hidden', products.length>0);
-    const sortedProducts = [...products].sort((a,b)=> String(a.name||'').localeCompare(String(b.name||''), undefined, {sensitivity:'base'}));
-    tbody.innerHTML = sortedProducts.map(p=>`
-      <tr data-pid="${p.id}" class="${p.locked?'row-locked':''}">
-        ${PRODUCT_FIELDS.map(f=>`<td><input type="${f[2]}" data-field="${f[0]}" ${p.locked?'readonly':''} class="${p.locked?'derived-field':''}" value="${escapeHtml(p[f[0]])}" placeholder="${f[4]}"></td>`).join('')}
-        <td class="no-print">
-          <button class="btn sm danger" data-act="delproduct" ${p.locked?'disabled':''}>Delete</button>
-          <button class="btn sm ${p.locked?'amber':'grey'}" data-act="togglelock">${p.locked?'🔒 Locked':'🔓 Unlocked'}</button>
-        </td>
-      </tr>
+    const container = document.getElementById('productLibraryContainer');
+    const brandsPresent = Array.from(new Set([...BRANDS, ...products.map(p=>p.brand||'Jotun')]));
+    container.innerHTML = brandsPresent.map(brand=>`
+      <div class="card">
+        <div class="toolbar">
+          <h3 style="margin:0;">${escapeHtml(brand)} — Protective &amp; Marine</h3>
+          <div class="spacer"></div>
+          <button class="btn sm" data-act="addproduct" data-brand="${escapeHtml(brand)}">+ Add ${escapeHtml(brand)} Product</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>${PRODUCT_FIELDS.map(f=>`<th style="min-width:${f[3]}">${f[1]}</th>`).join('')}<th class="no-print">Actions</th></tr></thead>
+            <tbody data-brand-body="${escapeHtml(brand)}"></tbody>
+          </table>
+          <div class="empty-state hidden" data-brand-empty="${escapeHtml(brand)}">
+            <div class="big">🧪</div>
+            <div>No ${escapeHtml(brand)} products yet. Click "+ Add ${escapeHtml(brand)} Product" to add one, sourced from its TDS.</div>
+          </div>
+        </div>
+      </div>
     `).join('');
 
-    tbody.querySelectorAll('tr').forEach(tr=>{
-      const pid = tr.dataset.pid;
-      const product = products.find(p=>p.id===pid);
-      tr.querySelectorAll('[data-field]').forEach(input=>{
-        input.addEventListener('input', ()=>{
-          product[input.dataset.field] = input.value;
+    brandsPresent.forEach(brand=>{
+      const tbody = container.querySelector(`[data-brand-body="${brand}"]`);
+      const brandProducts = products.filter(p=>(p.brand||'Jotun')===brand)
+        .sort((a,b)=> String(a.name||'').localeCompare(String(b.name||''), undefined, {sensitivity:'base'}));
+      container.querySelector(`[data-brand-empty="${brand}"]`).classList.toggle('hidden', brandProducts.length>0);
+
+      tbody.innerHTML = brandProducts.map(p=>`
+        <tr data-pid="${p.id}" class="${p.locked?'row-locked':''}">
+          ${PRODUCT_FIELDS.map(f=>`<td><input type="${f[2]}" data-field="${f[0]}" ${p.locked?'readonly':''} class="${p.locked?'derived-field':''}" value="${escapeHtml(p[f[0]])}" placeholder="${f[4]}"></td>`).join('')}
+          <td class="no-print">
+            <button class="btn sm danger" data-act="delproduct" ${p.locked?'disabled':''}>Delete</button>
+            <button class="btn sm ${p.locked?'amber':'grey'}" data-act="togglelock">${p.locked?'🔒 Locked':'🔓 Unlocked'}</button>
+          </td>
+        </tr>
+      `).join('');
+
+      tbody.querySelectorAll('tr').forEach(tr=>{
+        const pid = tr.dataset.pid;
+        const product = products.find(p=>p.id===pid);
+        tr.querySelectorAll('[data-field]').forEach(input=>{
+          input.addEventListener('input', ()=>{
+            product[input.dataset.field] = input.value;
+            persistProducts();
+          });
+        });
+        tr.querySelector('[data-act="delproduct"]').addEventListener('click', async ()=>{
+          if(product.locked) return;
+          const ok = await confirmModal(`Remove "${product.name || '(unnamed product)'}" from the product library? Coats already using it keep their saved values, but it will no longer appear in the dropdown.`);
+          if(!ok) return;
+          products = products.filter(p=>p.id!==pid);
           persistProducts();
+          renderProducts();
+        });
+        tr.querySelector('[data-act="togglelock"]').addEventListener('click', ()=>{
+          product.locked = !product.locked;
+          persistProducts();
+          renderProducts();
         });
       });
-      tr.querySelector('[data-act="delproduct"]').addEventListener('click', async ()=>{
-        if(product.locked) return;
-        const ok = await confirmModal(`Remove "${product.name || '(unnamed product)'}" from the product library? Coats already using it keep their saved values, but it will no longer appear in the dropdown.`);
-        if(!ok) return;
-        products = products.filter(p=>p.id!==pid);
-        persistProducts();
-        renderProducts();
-      });
-      tr.querySelector('[data-act="togglelock"]').addEventListener('click', ()=>{
-        product.locked = !product.locked;
+    });
+
+    container.querySelectorAll('[data-act="addproduct"]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const blank = { id: uid(), brand: btn.dataset.brand };
+        PRODUCT_FIELDS.forEach(f=> blank[f[0]] = "");
+        products.push(blank);
         persistProducts();
         renderProducts();
       });
     });
   }
-  document.getElementById('btnAddProduct').addEventListener('click', ()=>{
-    const blank = { id: uid() };
-    PRODUCT_FIELDS.forEach(f=> blank[f[0]] = "");
-    products.push(blank);
-    persistProducts();
-    renderProducts();
-  });
 
   // ---------- INIT ----------
   (async ()=>{
