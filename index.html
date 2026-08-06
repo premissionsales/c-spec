@@ -675,6 +675,7 @@
   // ---------- PRODUCT LIBRARY (user-managed, stored locally — see "Product Library" tab) ----------
   const PRODUCTS_STORAGE_KEY = "coatspec_products_v1";
   const BRANDS = ["Jotun", "Nippon"];
+  function brandLabel(brand){ return `${brand} PMC`; }
   let products = [];
   async function loadProducts(){
     try{ products = JSON.parse(localStorage.getItem(PRODUCTS_STORAGE_KEY)) || []; }catch(e){ products = []; }
@@ -1045,7 +1046,7 @@
     const jumpNav = document.getElementById('brandJumpNav');
     jumpNav.innerHTML = brandsPresent.map(brand=>{
       const count = products.filter(p=>(p.brand||'Jotun')===brand).length;
-      return `<button type="button" data-jump-to="${escapeHtml(brand)}">${escapeHtml(brand)} <span class="count">(${count})</span></button>`;
+      return `<button type="button" data-jump-to="${escapeHtml(brand)}">${escapeHtml(brandLabel(brand))} <span class="count">(${count})</span></button>`;
     }).join('');
     jumpNav.querySelectorAll('[data-jump-to]').forEach(btn=>{
       btn.addEventListener('click', ()=>{
@@ -1058,7 +1059,7 @@
         <div class="toolbar">
           <h3 style="margin:0;">${escapeHtml(brand)} — Protective &amp; Marine</h3>
           <div class="spacer"></div>
-          <button class="btn sm" data-act="addproduct" data-brand="${escapeHtml(brand)}">+ Add ${escapeHtml(brand)} Product</button>
+          <button class="btn sm" data-act="addproduct" data-brand="${escapeHtml(brand)}">+ Add ${escapeHtml(brandLabel(brand))} Product</button>
         </div>
         <div class="table-wrap">
           <table>
@@ -1067,7 +1068,7 @@
           </table>
           <div class="empty-state hidden" data-brand-empty="${escapeHtml(brand)}">
             <div class="big">🧪</div>
-            <div>No ${escapeHtml(brand)} products yet. Click "+ Add ${escapeHtml(brand)} Product" to add one, sourced from its TDS.</div>
+            <div>No ${escapeHtml(brandLabel(brand))} products yet. Click "+ Add ${escapeHtml(brandLabel(brand))} Product" to add one, sourced from its TDS.</div>
           </div>
         </div>
       </div>
