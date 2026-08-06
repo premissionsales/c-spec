@@ -677,6 +677,8 @@
   const BRANDS = ["Jotun", "Nippon", "Kansai", "PPG"];
   const CATEGORIES = ["Protective & Marine", "Decorative"];
   const DEFAULT_CATEGORY = "Protective & Marine";
+  // Brand/category combos to hide from the default grid (still shown if products already exist there).
+  const EXCLUDED_SECTIONS = [{brand:"PPG", category:"Decorative"}];
   function sectionKey(brand, category){ return `${brand}__${category}`; }
   function sectionLabel(brand, category){ return category===DEFAULT_CATEGORY ? `${brand} PMC` : `${brand} ${category}`; }
   let products = [];
@@ -1050,8 +1052,12 @@
 
     // Fixed grid of (category, brand) sections — category outer so PMC sections stay first, matching the original layout.
     const sectionList = [];
-    CATEGORIES.forEach(category=> BRANDS.forEach(brand=> sectionList.push({brand, category})));
-    // Also cover any legacy brand/category combos present in data but outside the known grid (defensive, shouldn't normally happen).
+    const isExcluded = (brand,category)=> EXCLUDED_SECTIONS.some(e=> e.brand===brand && e.category===category);
+    CATEGORIES.forEach(category=> BRANDS.forEach(brand=>{
+      if(!isExcluded(brand,category)) sectionList.push({brand, category});
+    }));
+    // Also cover any brand/category combos present in data but outside the default grid — including excluded
+    // ones that already have products in them (an excluded section only hides itself while genuinely empty).
     products.forEach(p=>{
       const brand = p.brand || 'Jotun';
       const category = p.category || DEFAULT_CATEGORY;
