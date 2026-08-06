@@ -755,7 +755,7 @@
     const totalConsumption = parseFloat(coat.totalConsumption);
     const thinnerMaxPct = parseFloat(coat.thinnerMaxPct);
     if(totalConsumption>=0 && thinnerMaxPct>=0){
-      coat.totalThinnerConsumption = String(Math.ceil(totalConsumption*(thinnerMaxPct/100)));
+      coat.totalThinnerConsumption = String(Math.round(totalConsumption*(thinnerMaxPct/100)));
     } else {
       coat.totalThinnerConsumption = '';
     }
@@ -1055,7 +1055,7 @@
         </div>
         ${s.remarks? `<div class="field"><label>Remarks</label><div>${escapeHtml(s.remarks).replace(/\n/g,'<br>')}</div></div>`:''}
         <div class="total-bar" style="margin-top:12px;border-radius:6px;">
-          <div>Total Thinner Consumption (entire specification): <strong>${specThinnerTotal>0? Math.ceil(specThinnerTotal)+' L' : '-'}</strong></div>
+          <div>Total Thinner Consumption (entire specification): <strong>${specThinnerTotal>0? Math.round(specThinnerTotal)+' L' : '-'}</strong></div>
         </div>
       </div>
 
@@ -1079,7 +1079,7 @@
             </table>
           </div>
           <div class="total-bar">
-            <div>Total Thinner Consumption (this position): <strong>${positionThinnerTotal>0? Math.ceil(positionThinnerTotal)+' L' : '-'}</strong></div>
+            <div>Total Thinner Consumption (this position): <strong>${positionThinnerTotal>0? Math.round(positionThinnerTotal)+' L' : '-'}</strong></div>
           </div>
         </div>
       `;
