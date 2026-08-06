@@ -675,7 +675,10 @@
   // ---------- PRODUCT LIBRARY (user-managed, stored locally — see "Product Library" tab) ----------
   const PRODUCTS_STORAGE_KEY = "coatspec_products_v1";
   const BRANDS = ["Jotun", "Nippon"];
-  function brandLabel(brand){ return `${brand} PMC`; }
+  const CATEGORIES = ["Protective & Marine", "Decorative"];
+  const DEFAULT_CATEGORY = "Protective & Marine";
+  function sectionKey(brand, category){ return `${brand}__${category}`; }
+  function sectionLabel(brand, category){ return category===DEFAULT_CATEGORY ? `${brand} PMC` : `${brand} ${category}`; }
   let products = [];
   async function loadProducts(){
     try{ products = JSON.parse(localStorage.getItem(PRODUCTS_STORAGE_KEY)) || []; }catch(e){ products = []; }
@@ -689,14 +692,17 @@
     if(products.length===0){
       // Seed with defaults sourced from each product's TDS, editable/removable in the Product Library tab.
       products = [
-        { id: uid(), brand: "Jotun", name: "Jotamastic 90", volumeSolids: 80, minDft: 100, maxDft: 300, minWft: 125, maxWft: 375, mixRatio: "3.5:1 by volume (Comp A : Comp B)", thinner: "Jotun Thinner No. 17", curing: "Min. 3 h @ 23°C (up to 30 h @ 0°C) — see Application Guide for max interval" },
-        { id: uid(), brand: "Jotun", name: "Uniprime QD", volumeSolids: 38, minDft: 35, maxDft: 100, minWft: 95, maxWft: 260, mixRatio: "Single pack", thinner: "Jotun Thinner No. 7", curing: "Min. 2 h @ 23°C (up to 4 h @ 5°C) — see Application Guide for max interval" }
+        { id: uid(), brand: "Jotun", category: DEFAULT_CATEGORY, name: "Jotamastic 90", volumeSolids: 80, minDft: 100, maxDft: 300, minWft: 125, maxWft: 375, mixRatio: "3.5:1 by volume (Comp A : Comp B)", thinner: "Jotun Thinner No. 17", curing: "Min. 3 h @ 23°C (up to 30 h @ 0°C) — see Application Guide for max interval" },
+        { id: uid(), brand: "Jotun", category: DEFAULT_CATEGORY, name: "Uniprime QD", volumeSolids: 38, minDft: 35, maxDft: 100, minWft: 95, maxWft: 260, mixRatio: "Single pack", thinner: "Jotun Thinner No. 7", curing: "Min. 2 h @ 23°C (up to 4 h @ 5°C) — see Application Guide for max interval" }
       ];
       persistProducts();
     }
-    // Migrate pre-existing products (added before brands existed) — all were Jotun products.
+    // Migrate pre-existing products (added before brand/category existed) — all were Jotun Protective & Marine products.
     let migrated = false;
-    products.forEach(p=>{ if(!p.brand){ p.brand = "Jotun"; migrated = true; } });
+    products.forEach(p=>{
+      if(!p.brand){ p.brand = "Jotun"; migrated = true; }
+      if(!p.category){ p.category = DEFAULT_CATEGORY; migrated = true; }
+    });
     if(migrated) persistProducts();
   }
   function persistProducts(){
@@ -1041,12 +1047,22 @@
   ];
   function renderProducts(){
     const container = document.getElementById('productLibraryContainer');
-    const brandsPresent = Array.from(new Set([...BRANDS, ...products.map(p=>p.brand||'Jotun')]));
+
+    // Fixed grid of (category, brand) sections — category outer so PMC sections stay first, matching the original layout.
+    const sectionList = [];
+    CATEGORIES.forEach(category=> BRANDS.forEach(brand=> sectionList.push({brand, category})));
+    // Also cover any legacy brand/category combos present in data but outside the known grid (defensive, shouldn't normally happen).
+    products.forEach(p=>{
+      const brand = p.brand || 'Jotun';
+      const category = p.category || DEFAULT_CATEGORY;
+      if(!sectionList.some(s=> s.brand===brand && s.category===category)) sectionList.push({brand, category});
+    });
 
     const jumpNav = document.getElementById('brandJumpNav');
-    jumpNav.innerHTML = brandsPresent.map(brand=>{
-      const count = products.filter(p=>(p.brand||'Jotun')===brand).length;
-      return `<button type="button" data-jump-to="${escapeHtml(brand)}">${escapeHtml(brandLabel(brand))} <span class="count">(${count})</span></button>`;
+    jumpNav.innerHTML = sectionList.map(({brand,category})=>{
+      const key = sectionKey(brand,category);
+      const count = products.filter(p=>(p.brand||'Jotun')===brand && (p.category||DEFAULT_CATEGORY)===category).length;
+      return `<button type="button" data-jump-to="${escapeHtml(key)}">${escapeHtml(sectionLabel(brand,category))} <span class="count">(${count})</span></button>`;
     }).join('');
     jumpNav.querySelectorAll('[data-jump-to]').forEach(btn=>{
       btn.addEventListener('click', ()=>{
@@ -1054,33 +1070,38 @@
         if(card) card.scrollIntoView({behavior:'smooth', block:'start'});
       });
     });
-    container.innerHTML = brandsPresent.map(brand=>`
-      <div class="card" id="brandCard-${escapeHtml(brand)}">
+    container.innerHTML = sectionList.map(({brand,category})=>{
+      const key = sectionKey(brand,category);
+      const label = sectionLabel(brand,category);
+      return `
+      <div class="card" id="brandCard-${escapeHtml(key)}">
         <div class="toolbar">
-          <h3 style="margin:0;">${escapeHtml(brand)} — Protective &amp; Marine</h3>
+          <h3 style="margin:0;">${escapeHtml(brand)} — ${escapeHtml(category)}</h3>
           <div class="spacer"></div>
-          <button class="btn sm" data-act="addproduct" data-brand="${escapeHtml(brand)}">+ Add ${escapeHtml(brandLabel(brand))} Product</button>
+          <button class="btn sm" data-act="addproduct" data-brand="${escapeHtml(brand)}" data-category="${escapeHtml(category)}">+ Add ${escapeHtml(label)} Product</button>
         </div>
         <div class="table-wrap">
           <table>
             <thead><tr>${PRODUCT_FIELDS.map(f=>`<th style="min-width:${f[3]}">${f[1]}</th>`).join('')}<th class="no-print">Actions</th></tr></thead>
-            <tbody data-brand-body="${escapeHtml(brand)}"></tbody>
+            <tbody data-brand-body="${escapeHtml(key)}"></tbody>
           </table>
-          <div class="empty-state hidden" data-brand-empty="${escapeHtml(brand)}">
+          <div class="empty-state hidden" data-brand-empty="${escapeHtml(key)}">
             <div class="big">🧪</div>
-            <div>No ${escapeHtml(brandLabel(brand))} products yet. Click "+ Add ${escapeHtml(brandLabel(brand))} Product" to add one, sourced from its TDS.</div>
+            <div>No ${escapeHtml(label)} products yet. Click "+ Add ${escapeHtml(label)} Product" to add one, sourced from its TDS.</div>
           </div>
         </div>
       </div>
-    `).join('');
+    `;
+    }).join('');
 
-    brandsPresent.forEach(brand=>{
-      const tbody = container.querySelector(`[data-brand-body="${brand}"]`);
-      const brandProducts = products.filter(p=>(p.brand||'Jotun')===brand)
+    sectionList.forEach(({brand,category})=>{
+      const key = sectionKey(brand,category);
+      const tbody = container.querySelector(`[data-brand-body="${key}"]`);
+      const sectionProducts = products.filter(p=>(p.brand||'Jotun')===brand && (p.category||DEFAULT_CATEGORY)===category)
         .sort((a,b)=> String(a.name||'').localeCompare(String(b.name||''), undefined, {sensitivity:'base'}));
-      container.querySelector(`[data-brand-empty="${brand}"]`).classList.toggle('hidden', brandProducts.length>0);
+      container.querySelector(`[data-brand-empty="${key}"]`).classList.toggle('hidden', sectionProducts.length>0);
 
-      tbody.innerHTML = brandProducts.map(p=>`
+      tbody.innerHTML = sectionProducts.map(p=>`
         <tr data-pid="${p.id}" class="${p.locked?'row-locked':''}">
           ${PRODUCT_FIELDS.map(f=>`<td><input type="${f[2]}" data-field="${f[0]}" ${p.locked?'readonly':''} class="${p.locked?'derived-field':''}" value="${escapeHtml(p[f[0]])}" placeholder="${f[4]}"></td>`).join('')}
           <td class="no-print">
@@ -1117,7 +1138,7 @@
 
     container.querySelectorAll('[data-act="addproduct"]').forEach(btn=>{
       btn.addEventListener('click', ()=>{
-        const blank = { id: uid(), brand: btn.dataset.brand };
+        const blank = { id: uid(), brand: btn.dataset.brand, category: btn.dataset.category };
         PRODUCT_FIELDS.forEach(f=> blank[f[0]] = "");
         products.push(blank);
         persistProducts();
