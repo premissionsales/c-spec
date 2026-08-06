@@ -427,7 +427,8 @@
   function newCoat(n){
     return {
       coatNo: n||1, product:"", genericType:"", color:"",
-      dft:"", volumeSolids:"", spreadRateTheor:"", lossPct:"", consumption:"",
+      dft:"", volumeSolids:"", spreadRateTheor:"", lossPct:"", consumption:"", totalConsumption:"",
+      thinnerMaxPct:"", totalThinnerConsumption:"",
       application:"", curing:"", standard:""
     };
   }
@@ -554,10 +555,10 @@
   });
   document.getElementById('btnExportCsv').addEventListener('click', ()=>{
     const s = getSpec(currentId); if(!s) return;
-    let rows = [["Position","Area (m2)","Coat No","Product","Color","DFT (µm)","Volume Solids (%)","Theor. Spread Rate (m2/L)","Loss (%)","Consumption (L/m2)","Total Consumption (L)"]];
+    let rows = [["Position","Area (m2)","Coat No","Product","Color","DFT (µm)","Volume Solids (%)","Theor. Spread Rate (m2/L)","Loss (%)","Consumption (L/m2)","Total Consumption (L)","Thinner Max (%)","Total Thinner Consumption (L)"]];
     s.positions.forEach(p=>{
       p.coats.forEach(c=>{
-        rows.push([p.name,p.area,c.coatNo,c.product,c.color,c.dft,c.volumeSolids,c.spreadRateTheor,c.lossPct,c.consumption,c.totalConsumption]);
+        rows.push([p.name,p.area,c.coatNo,c.product,c.color,c.dft,c.volumeSolids,c.spreadRateTheor,c.lossPct,c.consumption,c.totalConsumption,c.thinnerMaxPct,c.totalThinnerConsumption]);
       });
     });
     const csv = rows.map(r=> r.map(v=>`"${String(v==null?'':v).replace(/"/g,'""')}"`).join(',')).join('\n');
@@ -607,7 +608,7 @@
     if(missingCoatCount>0 || missingPositionCount>0){
       renderPositions();
       goToStep(2);
-      alert('Please fill in all required fields — Area to be Painted, Surface Preparation, DFT µm (dry), and Loss % — highlighted in red — before continuing.');
+      alert('Please fill in all required fields — Area to be Painted, Surface Preparation, DFT µm (dry), Loss %, and Thinner Max % — highlighted in red — before continuing.');
       return false;
     }
     return true;
@@ -668,8 +669,10 @@
     ["lossPct","Loss %","number","70px",true],
     ["consumption","Consumption (L/m²)","number","100px",false],
     ["totalConsumption","Total Consumption (L)","number","120px",false],
+    ["thinnerMaxPct","Thinner Max %","number","100px",true],
+    ["totalThinnerConsumption","Total Thinner Consumption (L)","number","150px",false],
   ];
-  const DERIVED_COAT_FIELDS = ["volumeSolids","spreadRateTheor","consumption","totalConsumption"];
+  const DERIVED_COAT_FIELDS = ["volumeSolids","spreadRateTheor","consumption","totalConsumption","totalThinnerConsumption"];
   const REQUIRED_COAT_FIELDS = COAT_FIELDS.filter(f=>f[4]);
 
   // ---------- PRODUCT LIBRARY (user-managed, stored locally — see "Product Library" tab) ----------
@@ -738,6 +741,19 @@
       coat.totalConsumption = String(Math.round(consumption*areaNum*100)/100);
     } else {
       coat.totalConsumption = '';
+    }
+    recalcThinnerConsumption(coat);
+  }
+
+  // Total Thinner Consumption (L) = Total Consumption (L) x Thinner Max % — the maximum amount
+  // of thinner permitted to be added to this coat's total paint volume.
+  function recalcThinnerConsumption(coat){
+    const totalConsumption = parseFloat(coat.totalConsumption);
+    const thinnerMaxPct = parseFloat(coat.thinnerMaxPct);
+    if(totalConsumption>=0 && thinnerMaxPct>=0){
+      coat.totalThinnerConsumption = String(Math.round(totalConsumption*(thinnerMaxPct/100)*100)/100);
+    } else {
+      coat.totalThinnerConsumption = '';
     }
   }
 
@@ -825,9 +841,15 @@
               const spreadInput = row.querySelector('[data-field="spreadRateTheor"]');
               const consumptionInput = row.querySelector('[data-field="consumption"]');
               const totalInput = row.querySelector('[data-field="totalConsumption"]');
+              const thinnerTotalInput = row.querySelector('[data-field="totalThinnerConsumption"]');
               if(spreadInput && document.activeElement!==spreadInput) spreadInput.value = coat.spreadRateTheor;
               if(consumptionInput && document.activeElement!==consumptionInput) consumptionInput.value = coat.consumption;
               if(totalInput) totalInput.value = coat.totalConsumption;
+              if(thinnerTotalInput) thinnerTotalInput.value = coat.totalThinnerConsumption;
+            } else if(input.dataset.field==='thinnerMaxPct'){
+              recalcThinnerConsumption(coat);
+              const thinnerTotalInput = row.querySelector('[data-field="totalThinnerConsumption"]');
+              if(thinnerTotalInput) thinnerTotalInput.value = coat.totalThinnerConsumption;
             }
           } else {
             pos[input.dataset.field] = input.value;
@@ -836,7 +858,9 @@
                 recalcTotalConsumption(coat, pos.area);
                 const coatIdx = pos.coats.indexOf(coat);
                 const totalInput = block.querySelector(`tr[data-ci="${coatIdx}"] [data-field="totalConsumption"]`);
+                const thinnerTotalInput = block.querySelector(`tr[data-ci="${coatIdx}"] [data-field="totalThinnerConsumption"]`);
                 if(totalInput) totalInput.value = coat.totalConsumption;
+                if(thinnerTotalInput) thinnerTotalInput.value = coat.totalThinnerConsumption;
               });
             }
           }
@@ -966,9 +990,16 @@
   }
 
   // ---------- PREVIEW ----------
+  function sumThinnerConsumption(coats){
+    return coats.reduce((sum,c)=>{
+      const v = parseFloat(c.totalThinnerConsumption);
+      return sum + (v>0 ? v : 0);
+    }, 0);
+  }
   function renderPreview(){
     const s = getSpec(currentId); if(!s) return;
     const el = document.getElementById('previewContent');
+    const specThinnerTotal = s.positions.reduce((sum,p)=> sum + sumThinnerConsumption(p.coats), 0);
     el.innerHTML = `
       <div class="card">
         <h2>${escapeHtml(s.title || '(untitled specification)')}</h2>
@@ -991,9 +1022,14 @@
           <div class="field"><label>Status</label><div><span class="badge ${s.status==='Completed'?'completed':'draft'}">${s.status}</span></div></div>
         </div>
         ${s.remarks? `<div class="field"><label>Remarks</label><div>${escapeHtml(s.remarks).replace(/\n/g,'<br>')}</div></div>`:''}
+        <div class="total-bar" style="margin-top:12px;border-radius:6px;">
+          <div>Total Thinner Consumption (entire specification): <strong>${specThinnerTotal>0? specThinnerTotal.toFixed(2)+' L' : '-'}</strong></div>
+        </div>
       </div>
 
-      ${s.positions.map(p=>`
+      ${s.positions.map(p=>{
+        const positionThinnerTotal = sumThinnerConsumption(p.coats);
+        return `
         <div class="card">
           <h3>${escapeHtml(p.name||'(unnamed position)')}</h3>
           <div class="row">
@@ -1010,8 +1046,12 @@
               </tbody>
             </table>
           </div>
+          <div class="total-bar">
+            <div>Total Thinner Consumption (this position): <strong>${positionThinnerTotal>0? positionThinnerTotal.toFixed(2)+' L' : '-'}</strong></div>
+          </div>
         </div>
-      `).join('')}
+      `;
+      }).join('')}
 
       ${s.documents.length? `
         <div class="card">
