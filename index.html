@@ -672,7 +672,7 @@
     ["lossPct","Loss %","number","70px",true],
     ["consumption","Consumption (L/m²)","number","100px",false],
     ["totalConsumption","Total Consumption (L)","number","120px",false],
-    ["thinnerType","Thinner Type","text","150px",false],
+    ["thinnerType","Thinner","text","150px",false],
     ["thinnerMaxPct","Thinner Max %","number","100px",true],
     ["totalThinnerConsumption","Total Thinner Consumption (L)","number","150px",false],
   ];
@@ -774,8 +774,34 @@
     datalist.innerHTML = sorted.map(p=>`<option value="${escapeHtml(p.name)}"></option>`).join('');
   }
 
+  // Keeps each coat's product-derived fields (Vol. Solids, Curing, Thinner) in sync with the
+  // Product Library whenever the coat's product matches a known entry — including coats that
+  // had their product selected before a given derived field existed.
+  function syncCoatsWithProductLibrary(s){
+    let changed = false;
+    s.positions.forEach(p=>{
+      p.coats.forEach(coat=>{
+        const productData = getProductByName(coat.product);
+        if(!productData) return;
+        const nextVolumeSolids = String(productData.volumeSolids);
+        const nextCuring = productData.curing || '';
+        const nextThinnerType = productData.thinner || '';
+        if(coat.volumeSolids!==nextVolumeSolids || coat.curing!==nextCuring || coat.thinnerType!==nextThinnerType){
+          coat.volumeSolids = nextVolumeSolids;
+          coat.curing = nextCuring;
+          coat.thinnerType = nextThinnerType;
+          recalcCoatFromTds(coat);
+          recalcTotalConsumption(coat, p.area);
+          changed = true;
+        }
+      });
+    });
+    if(changed) persist();
+  }
+
   function renderPositions(){
     const s = getSpec(currentId); if(!s) return;
+    syncCoatsWithProductLibrary(s);
     renderProductDatalist();
     const container = document.getElementById('positionsContainer');
     if(s.positions.length===0){
@@ -1003,6 +1029,7 @@
   }
   function renderPreview(){
     const s = getSpec(currentId); if(!s) return;
+    syncCoatsWithProductLibrary(s);
     const el = document.getElementById('previewContent');
     const specThinnerTotal = s.positions.reduce((sum,p)=> sum + sumThinnerConsumption(p.coats), 0);
     el.innerHTML = `
