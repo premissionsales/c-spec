@@ -1025,12 +1025,6 @@
   }
 
   // ---------- PREVIEW ----------
-  function sumThinnerConsumption(coats){
-    return coats.reduce((sum,c)=>{
-      const v = parseFloat(c.totalThinnerConsumption);
-      return sum + (v>0 ? v : 0);
-    }, 0);
-  }
 
   // Builds the "Summary of Products & Volumes" rows: one row per unique product+color with its
   // total paint consumption, followed by one row per unique thinner type with its total consumption.
@@ -1060,6 +1054,18 @@
     const rows = [...productRows, ...thinnerRows];
     const total = rows.reduce((sum,r)=> sum + r.consumption, 0);
     return { rows, total };
+  }
+
+  // Per-position breakdown: total paint volume used for each unique product name within that position.
+  function buildPositionProductVolumes(p){
+    const productMap = new Map();
+    p.coats.forEach(c=>{
+      const consumption = parseFloat(c.totalConsumption);
+      if(c.product && consumption>0){
+        productMap.set(c.product, (productMap.get(c.product)||0) + consumption);
+      }
+    });
+    return Array.from(productMap.entries()).map(([product,total])=>({ product, consumption: Math.round(total) }));
   }
   function renderPreview(){
     const s = getSpec(currentId); if(!s) return;
@@ -1091,7 +1097,7 @@
       </div>
 
       ${s.positions.map(p=>{
-        const positionThinnerTotal = sumThinnerConsumption(p.coats);
+        const positionProductVolumes = buildPositionProductVolumes(p);
         return `
         <div class="card">
           <h3>${escapeHtml(p.name||'(unnamed position)')}</h3>
@@ -1109,9 +1115,11 @@
               </tbody>
             </table>
           </div>
-          <div class="total-bar">
-            <div>Total Thinner Consumption (this position): <strong>${positionThinnerTotal>0? Math.round(positionThinnerTotal)+' L' : '-'}</strong></div>
-          </div>
+          ${positionProductVolumes.length? `
+            <div class="total-bar" style="flex-direction:column;align-items:stretch;gap:4px;">
+              ${positionProductVolumes.map(pv=>`<div>${escapeHtml(pv.product)}: <strong>${pv.consumption} L</strong></div>`).join('')}
+            </div>
+          `:''}
         </div>
       `;
       }).join('')}
