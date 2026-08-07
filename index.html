@@ -1059,13 +1059,20 @@
   // Per-position breakdown: total paint volume used for each unique product name within that position.
   function buildPositionProductVolumes(p){
     const productMap = new Map();
+    const thinnerMap = new Map();
     p.coats.forEach(c=>{
       const consumption = parseFloat(c.totalConsumption);
       if(c.product && consumption>0){
         productMap.set(c.product, (productMap.get(c.product)||0) + consumption);
       }
+      const thinnerConsumption = parseFloat(c.totalThinnerConsumption);
+      if(c.thinnerType && thinnerConsumption>0){
+        thinnerMap.set(c.thinnerType, (thinnerMap.get(c.thinnerType)||0) + thinnerConsumption);
+      }
     });
-    return Array.from(productMap.entries()).map(([product,total])=>({ product, consumption: Math.round(total) }));
+    const productRows = Array.from(productMap.entries()).map(([product,total])=>({ product, consumption: Math.round(total) }));
+    const thinnerRows = Array.from(thinnerMap.entries()).map(([thinner,total])=>({ product: thinner, consumption: Math.round(total) }));
+    return [...productRows, ...thinnerRows];
   }
   function renderPreview(){
     const s = getSpec(currentId); if(!s) return;
