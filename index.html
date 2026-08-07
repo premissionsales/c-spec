@@ -1065,7 +1065,6 @@
     const s = getSpec(currentId); if(!s) return;
     syncCoatsWithProductLibrary(s);
     const el = document.getElementById('previewContent');
-    const specThinnerTotal = s.positions.reduce((sum,p)=> sum + sumThinnerConsumption(p.coats), 0);
     const productVolumeSummary = buildProductVolumeSummary(s);
     el.innerHTML = `
       <div class="card">
@@ -1089,9 +1088,6 @@
           <div class="field"><label>Status</label><div><span class="badge ${s.status==='Completed'?'completed':'draft'}">${s.status}</span></div></div>
         </div>
         ${s.remarks? `<div class="field"><label>Remarks</label><div>${escapeHtml(s.remarks).replace(/\n/g,'<br>')}</div></div>`:''}
-        <div class="total-bar" style="margin-top:12px;border-radius:6px;">
-          <div>Total Thinner Consumption (entire specification): <strong>${specThinnerTotal>0? Math.round(specThinnerTotal)+' L' : '-'}</strong></div>
-        </div>
       </div>
 
       ${s.positions.map(p=>{
