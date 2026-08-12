@@ -1068,6 +1068,15 @@
     return { rows, total };
   }
 
+  // Builds the "Summary of Total Area" rows: one row per position with its area to be painted.
+  function buildAreaSummary(s){
+    const rows = s.positions
+      .filter(p=> parseFloat(p.area) > 0)
+      .map(p=>({ position: p.name || '(unnamed position)', area: parseFloat(p.area) }));
+    const total = rows.reduce((sum,r)=> sum + r.area, 0);
+    return { rows, total };
+  }
+
   // Per-position breakdown: total paint volume used for each unique product name within that position.
   function buildPositionProductVolumes(p){
     const productMap = new Map();
@@ -1091,6 +1100,7 @@
     syncCoatsWithProductLibrary(s);
     const el = document.getElementById('previewContent');
     const productVolumeSummary = buildProductVolumeSummary(s);
+    const areaSummary = buildAreaSummary(s);
     el.innerHTML = `
       <div class="card keep-with-next">
         <h2>${escapeHtml(s.title || '(untitled specification)')}</h2>
@@ -1114,6 +1124,29 @@
         </div>
         ${s.remarks? `<div class="field"><label>Remarks</label><div>${escapeHtml(s.remarks).replace(/\n/g,'<br>')}</div></div>`:''}
       </div>
+
+      ${areaSummary.rows.length? `
+        <div class="card">
+          <h3>Summary of Total Area</h3>
+          <div class="table-wrap">
+            <table class="summary-table">
+              <thead><tr><th>Position</th><th>Area (m²)</th></tr></thead>
+              <tbody>
+                ${areaSummary.rows.map((r,i)=>`
+                  <tr class="${i%2===1?'zebra':''}">
+                    <td>${escapeHtml(r.position)}</td>
+                    <td>${r.area}</td>
+                  </tr>
+                `).join('')}
+                <tr class="summary-total-row">
+                  <td style="font-weight:700;">Total:</td>
+                  <td style="font-weight:700;border-top:2px solid var(--navy);">${areaSummary.total}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `:''}
 
       ${productVolumeSummary.rows.length? `
         <div class="card">
