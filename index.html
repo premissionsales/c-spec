@@ -445,7 +445,7 @@
   }
   function newCoat(n){
     return {
-      coatNo: n||1, product:"", genericType:"", color:"",
+      coatNo: n||1, brand:"", product:"", genericType:"", color:"",
       dft:"", volumeSolids:"", spreadRateTheor:"", lossPct:"", consumption:"", totalConsumption:"",
       thinnerType:"", thinnerMaxPct:"", totalThinnerConsumption:"",
       application:"", curing:"", standard:""
@@ -574,10 +574,10 @@
   });
   document.getElementById('btnExportCsv').addEventListener('click', ()=>{
     const s = getSpec(currentId); if(!s) return;
-    let rows = [["Position","Area (m2)","Coat No","Product","Color","DFT (µm)","Volume Solids (%)","Theor. Spread Rate (m2/L)","Loss (%)","Consumption (L/m2)","Total Consumption (L)","Thinner Type","Thinner Max (%)","Total Thinner Consumption (L)"]];
+    let rows = [["Position","Area (m2)","Coat No","Brand","Product","Color","DFT (µm)","Volume Solids (%)","Theor. Spread Rate (m2/L)","Loss (%)","Consumption (L/m2)","Total Consumption (L)","Thinner Type","Thinner Max (%)","Total Thinner Consumption (L)"]];
     s.positions.forEach(p=>{
       p.coats.forEach(c=>{
-        rows.push([p.name,p.area,c.coatNo,c.product,c.color,c.dft,c.volumeSolids,c.spreadRateTheor,c.lossPct,c.consumption,c.totalConsumption,c.thinnerType,c.thinnerMaxPct,c.totalThinnerConsumption]);
+        rows.push([p.name,p.area,c.coatNo,c.brand,c.product,c.color,c.dft,c.volumeSolids,c.spreadRateTheor,c.lossPct,c.consumption,c.totalConsumption,c.thinnerType,c.thinnerMaxPct,c.totalThinnerConsumption]);
       });
     });
     const csv = rows.map(r=> r.map(v=>`"${String(v==null?'':v).replace(/"/g,'""')}"`).join(',')).join('\n');
@@ -680,6 +680,7 @@
   // ---------- STEP 2: POSITIONS ----------
   const COAT_FIELDS = [
     ["coatNo","Coat #","number","60px",false],
+    ["brand","Brand","text","90px",false],
     ["product","Product Name","select","150px",false],
     ["color","Color","text","90px",false],
     ["dft","DFT µm (dry)","number","90px",true],
@@ -692,7 +693,7 @@
     ["thinnerMaxPct","Thinner Max %","number","100px",true],
     ["totalThinnerConsumption","Total Thinner Consumption (L)","number","150px",false],
   ];
-  const DERIVED_COAT_FIELDS = ["volumeSolids","spreadRateTheor","consumption","totalConsumption","thinnerType","totalThinnerConsumption"];
+  const DERIVED_COAT_FIELDS = ["brand","volumeSolids","spreadRateTheor","consumption","totalConsumption","thinnerType","totalThinnerConsumption"];
   const REQUIRED_COAT_FIELDS = COAT_FIELDS.filter(f=>f[4]);
 
   // ---------- PRODUCT LIBRARY (user-managed, stored locally — see "Product Library" tab) ----------
@@ -802,10 +803,12 @@
         const nextVolumeSolids = String(productData.volumeSolids);
         const nextCuring = productData.curing || '';
         const nextThinnerType = productData.thinner || '';
-        if(coat.volumeSolids!==nextVolumeSolids || coat.curing!==nextCuring || coat.thinnerType!==nextThinnerType){
+        const nextBrand = productData.brand || '';
+        if(coat.volumeSolids!==nextVolumeSolids || coat.curing!==nextCuring || coat.thinnerType!==nextThinnerType || coat.brand!==nextBrand){
           coat.volumeSolids = nextVolumeSolids;
           coat.curing = nextCuring;
           coat.thinnerType = nextThinnerType;
+          coat.brand = nextBrand;
           recalcCoatFromTds(coat);
           recalcTotalConsumption(coat, p.area);
           changed = true;
@@ -931,6 +934,7 @@
             coat.volumeSolids = String(productData.volumeSolids);
             coat.curing = productData.curing;
             coat.thinnerType = productData.thinner || '';
+            coat.brand = productData.brand || '';
             recalcCoatFromTds(coat);
             recalcTotalConsumption(coat, pos.area);
             persist();
