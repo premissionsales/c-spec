@@ -297,6 +297,9 @@
     <div class="spacer"></div>
     <button class="btn danger" id="btnDeleteSpec">🗑 Delete Specification</button>
   </div>
+  <div class="print-only" style="text-align:center;margin-bottom:16px;">
+    <img id="printLogo" style="height:60px;width:auto;" alt="PMP logo">
+  </div>
   <div id="previewContent"></div>
 </section>
 
@@ -1302,6 +1305,10 @@
   }
 
   // ---------- INIT ----------
+  const headerLogoImg = document.querySelector('header.topbar .brand img');
+  const printLogoImg = document.getElementById('printLogo');
+  if(headerLogoImg && printLogoImg) printLogoImg.src = headerLogoImg.src;
+
   (async ()=>{
     setSyncStatus(sb ? 'Loading…' : '');
     await Promise.all([load(), loadProducts()]);
