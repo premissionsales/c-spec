@@ -68,7 +68,7 @@
   #productLibraryContainer input[type="number"]{-moz-appearance:textfield;appearance:textfield;}
   #positionsContainer .table-wrap input, #positionsContainer .table-wrap select{text-align:center;}
   #positionsContainer .table-wrap thead th{text-align:center;}
-  #previewContent table:not(.summary-table) th, #previewContent table:not(.summary-table) td{text-align:center;}
+  #previewContent table th, #previewContent table td{text-align:center;}
   #positionsContainer input[type="number"]::-webkit-outer-spin-button,
   #positionsContainer input[type="number"]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
   #positionsContainer input[type="number"]{-moz-appearance:textfield;appearance:textfield;}
@@ -115,6 +115,7 @@
     body{background:#fff;font-size:11px;}
     main{max-width:100%;margin:0;padding:0;}
     .card{box-shadow:none;border:none;padding:0;margin-bottom:16px;page-break-inside:avoid;}
+    .card.keep-with-next{page-break-after:avoid;}
     .print-only{display:block;}
     .table-wrap{overflow:visible !important;}
     table{width:100%;table-layout:auto;font-size:9px;page-break-inside:auto;}
@@ -1091,7 +1092,7 @@
     const el = document.getElementById('previewContent');
     const productVolumeSummary = buildProductVolumeSummary(s);
     el.innerHTML = `
-      <div class="card">
+      <div class="card keep-with-next">
         <h2>${escapeHtml(s.title || '(untitled specification)')}</h2>
         <div class="row">
           <div class="field"><label>Project</label><div>${escapeHtml(s.project||'-')}</div></div>
@@ -1113,6 +1114,31 @@
         </div>
         ${s.remarks? `<div class="field"><label>Remarks</label><div>${escapeHtml(s.remarks).replace(/\n/g,'<br>')}</div></div>`:''}
       </div>
+
+      ${productVolumeSummary.rows.length? `
+        <div class="card">
+          <h3>Summary of Products &amp; Volumes</h3>
+          <div class="table-wrap">
+            <table class="summary-table">
+              <thead><tr><th>Product</th><th>Color</th><th>Consumption (ltr)</th></tr></thead>
+              <tbody>
+                ${productVolumeSummary.rows.map((r,i)=>`
+                  <tr class="${i%2===1?'zebra':''}">
+                    <td>${escapeHtml(r.product)}</td>
+                    <td>${escapeHtml(r.color)}</td>
+                    <td>${r.consumption}</td>
+                  </tr>
+                `).join('')}
+                <tr class="summary-total-row">
+                  <td></td>
+                  <td style="font-weight:700;">Total:</td>
+                  <td style="font-weight:700;border-top:2px solid var(--navy);">${productVolumeSummary.total}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `:''}
 
       ${s.positions.map(p=>{
         const positionProductVolumes = buildPositionProductVolumes(p);
@@ -1141,31 +1167,6 @@
         </div>
       `;
       }).join('')}
-
-      ${productVolumeSummary.rows.length? `
-        <div class="card">
-          <h3>Summary of Products &amp; Volumes</h3>
-          <div class="table-wrap">
-            <table class="summary-table">
-              <thead><tr><th>Product</th><th>Color</th><th style="text-align:right;">Consumption (ltr)</th></tr></thead>
-              <tbody>
-                ${productVolumeSummary.rows.map((r,i)=>`
-                  <tr class="${i%2===1?'zebra':''}">
-                    <td>${escapeHtml(r.product)}</td>
-                    <td>${escapeHtml(r.color)}</td>
-                    <td style="text-align:right;">${r.consumption}</td>
-                  </tr>
-                `).join('')}
-                <tr class="summary-total-row">
-                  <td></td>
-                  <td style="text-align:right;font-weight:700;">Total:</td>
-                  <td style="text-align:right;font-weight:700;border-top:2px solid var(--navy);">${productVolumeSummary.total}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      `:''}
 
       ${s.documents.length? `
         <div class="card">
