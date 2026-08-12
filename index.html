@@ -118,9 +118,10 @@
     .card.keep-with-next{page-break-after:avoid;}
     .print-only{display:block;}
     .table-wrap{overflow:visible !important;}
-    table{width:100% !important;table-layout:fixed;font-size:8px;page-break-inside:auto;}
+    table{width:100% !important;table-layout:auto;font-size:8px;page-break-inside:auto;}
     table th, table td{padding:2px 3px;min-width:0 !important;width:auto;white-space:normal !important;word-break:break-word;overflow-wrap:break-word;}
     table tr{page-break-inside:avoid;}
+    .coats-table th:nth-child(3), .coats-table td:nth-child(3){width:17%;}
     h2{font-size:16px;}
     h3{font-size:13px;}
     .field label{font-size:10px;}
@@ -1189,7 +1190,7 @@
           ${p.surfacePrep? `<div class="field"><label>Surface Preparation</label><div>${escapeHtml(p.surfacePrep).replace(/\n/g,'<br>')}</div></div>`:''}
           ${p.remarks? `<div class="field"><label>Remarks</label><div>${escapeHtml(p.remarks).replace(/\n/g,'<br>')}</div></div>`:''}
           <div class="table-wrap">
-            <table>
+            <table class="coats-table">
               <thead><tr>${COAT_FIELDS.map(f=>`<th>${f[1]}</th>`).join('')}</tr></thead>
               <tbody>
                 ${p.coats.map(c=>`<tr>${COAT_FIELDS.map(f=>`<td>${escapeHtml(c[f[0]])||'-'}</td>`).join('')}</tr>`).join('')}
