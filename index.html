@@ -165,7 +165,10 @@
       <div class="spacer"></div>
       <button class="btn" id="btnNewSpec">+ New Specification</button>
       <button class="btn grey" id="btnImport">Import JSON</button>
+      <button class="btn grey" id="btnExportAll">⬇ Export All Data</button>
+      <button class="btn grey" id="btnImportAll">⬆ Import All Data</button>
       <input type="file" id="importFile" accept=".json" class="hidden">
+      <input type="file" id="importAllFile" accept=".json" class="hidden">
     </div>
     <div class="search-bar">
       <input type="text" id="searchInput" placeholder="Search by title, customer, project...">
@@ -332,7 +335,7 @@
 
 </main>
 
-<footer class="app-footer">C-SPEC — data syncs to a shared Supabase workspace (with a local browser copy as backup). <span id="syncStatus"></span></footer>
+<footer class="app-footer">C-SPEC — data is stored locally in this browser. Use "Export All Data" / "Import All Data" on the Dashboard to back up or move data to another computer. <span id="syncStatus"></span></footer>
 
 <div class="modal-overlay hidden" id="confirmOverlay">
   <div class="modal">
@@ -350,10 +353,15 @@
 (function(){
   "use strict";
 
-  // ---------- SUPABASE (shared workspace, no login — see project chat for setup) ----------
+  // ---------- SUPABASE (shared workspace — see project chat for setup) ----------
+  // Set to true and point these at a reachable backend (e.g. a self-hosted Supabase/Postgres
+  // instance on the local network) to re-enable shared sync. While false, the app runs purely
+  // on this browser's localStorage — use "Export All Data" / "Import All Data" on the
+  // Dashboard to move data between computers/browsers instead.
+  const REMOTE_SYNC_ENABLED = false;
   const SUPABASE_URL = "https://udlvibiuiuepzfxvatwe.supabase.co";
   const SUPABASE_ANON_KEY = "sb_publishable_As0ky10i7k7HFeQzqQTHlg_ZbzN83C_";
-  const sb = (window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY)
+  const sb = (REMOTE_SYNC_ENABLED && window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY)
     ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
     : null;
 
@@ -581,6 +589,34 @@
         persist(); renderDashboard();
         alert('Imported ' + list.length + ' specification(s).');
       }catch(err){ alert('Invalid JSON file.'); }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  });
+
+  // Full backup/restore: bundles every specification and the entire Product Library into
+  // one file, for moving data between browsers/computers without a shared backend.
+  document.getElementById('btnExportAll').addEventListener('click', ()=>{
+    const bundle = { type: 'coatspec-full-backup', exportedAt: new Date().toISOString(), specs, products };
+    downloadFile('c-spec_full_backup_' + todayISO() + '.json', JSON.stringify(bundle, null, 2), 'application/json');
+  });
+  document.getElementById('btnImportAll').addEventListener('click', ()=> document.getElementById('importAllFile').click());
+  document.getElementById('importAllFile').addEventListener('change', async (e)=>{
+    const file = e.target.files[0]; if(!file) return;
+    const reader = new FileReader();
+    reader.onload = async ()=>{
+      try{
+        const data = JSON.parse(reader.result);
+        const incomingSpecs = Array.isArray(data.specs) ? data.specs : [];
+        const incomingProducts = Array.isArray(data.products) ? data.products : [];
+        if(incomingSpecs.length===0 && incomingProducts.length===0){ alert('No specs or products found in this file.'); return; }
+        const ok = await confirmModal(`Import ${incomingSpecs.length} specification(s) and ${incomingProducts.length} product(s)? These will be added to what you already have (existing items are kept, not replaced).`);
+        if(!ok) return;
+        incomingSpecs.forEach(sp=>{ sp.id = uid(); specs.push(sp); });
+        incomingProducts.forEach(p=>{ p.id = uid(); products.push(p); });
+        persist(); persistProducts(); renderDashboard();
+        alert(`Imported ${incomingSpecs.length} specification(s) and ${incomingProducts.length} product(s).`);
+      }catch(err){ alert('Invalid backup file.'); }
     };
     reader.readAsText(file);
     e.target.value = '';
