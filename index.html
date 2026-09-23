@@ -503,7 +503,11 @@
       return matchesQ && matchesStatus;
     }).sort((a,b)=> new Date(b.updatedAt) - new Date(a.updatedAt));
 
-    document.getElementById('emptyState').classList.toggle('hidden', specs.length>0);
+    const emptyStateEl = document.getElementById('emptyState');
+    emptyStateEl.classList.toggle('hidden', filtered.length>0);
+    emptyStateEl.querySelector('div:last-child').textContent = specs.length===0
+      ? 'No specifications yet. Click "New Specification" to create your first coating system spec.'
+      : 'No specifications match your search/filter.';
     tbody.innerHTML = filtered.map(s=>`
       <tr data-id="${s.id}">
         <td><strong>${escapeHtml(s.title||'(untitled)')}</strong></td>
