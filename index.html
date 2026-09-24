@@ -326,7 +326,11 @@
 
 <!-- ============ PRODUCT LIBRARY ============ -->
 <section id="view-products" class="hidden">
-  <h2 style="color:var(--navy);margin:0 0 4px;">Product Library</h2>
+  <div class="toolbar no-print" style="margin-bottom:4px;">
+    <h2 style="color:var(--navy);margin:0;border:none;">Product Library</h2>
+    <div class="spacer"></div>
+    <button class="btn grey" id="btnExportProductsCsv">⬇ Export Products CSV</button>
+  </div>
   <p class="small-note" style="margin:0 0 12px;">Products added here appear in the Product Name search field when building a coating system. Volume Solids and the Curing/Overcoat Interval note are pulled from whatever you enter here — source this from the product's own Technical Data Sheet (TDS). Products are grouped below by brand.</p>
   <div class="brand-jumpnav" id="brandJumpNav"></div>
   <div id="productLibraryContainer"></div>
@@ -1293,6 +1297,26 @@
     ["mixRatio","Mix Ratio","text","110px","e.g. 3.5:1 by volume"],
     ["thinner","Thinner","text","220px","e.g. Jotun Thinner No. 17"],
   ];
+
+  // Exports the entire Product Library as a CSV, for use in other apps (spreadsheets, other
+  // databases, etc.) — includes brand/category plus every field shown in the library tables.
+  document.getElementById('btnExportProductsCsv').addEventListener('click', ()=>{
+    const header = ["Brand","Category","Locked", ...PRODUCT_FIELDS.map(f=>f[1])];
+    const sorted = [...products].sort((a,b)=>{
+      const brandCmp = String(a.brand||'').localeCompare(String(b.brand||''));
+      if(brandCmp!==0) return brandCmp;
+      const catCmp = String(a.category||'').localeCompare(String(b.category||''));
+      if(catCmp!==0) return catCmp;
+      return String(a.name||'').localeCompare(String(b.name||''));
+    });
+    const rows = [header, ...sorted.map(p=>[
+      p.brand||'', p.category||'', p.locked?'TRUE':'FALSE',
+      ...PRODUCT_FIELDS.map(f=> p[f[0]] ?? '')
+    ])];
+    const csv = rows.map(r=> r.map(v=>`"${String(v==null?'':v).replace(/"/g,'""')}"`).join(',')).join('\n');
+    downloadFile('c-spec_product_library_' + todayISO() + '.csv', csv, 'text/csv');
+  });
+
   function renderProducts(){
     const container = document.getElementById('productLibraryContainer');
 
