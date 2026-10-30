@@ -779,7 +779,9 @@
   function sectionLabel(brand, category){
     const s = findSection(brand, category);
     if(s && s.label) return s.label;
-    return category===DEFAULT_CATEGORY ? `${brand} PMC` : `${brand} ${category}`;
+    if(category===DEFAULT_CATEGORY) return `${brand} PMC`;
+    if(category==="Decorative") return `${brand} DC`;
+    return `${brand} ${category}`;
   }
   function sectionHeading(brand, category){
     const s = findSection(brand, category);
