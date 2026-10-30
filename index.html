@@ -117,6 +117,15 @@
   #view-editor .coats-table th, #view-editor .table-wrap th{background:var(--navy);color:#fff;border-color:var(--navy);}
   #view-editor .table-wrap th .req{color:#ffb4ae;}
   #view-editor .position-block{border-color:#bcd3c2;}
+  /* Product Library: same on-theme green styling */
+  #view-products .card{border-top:4px solid var(--blue);}
+  #view-products table th{background:var(--navy);color:#fff;border-color:var(--navy);}
+  #view-products tr.row-locked{background:#f1f6f2;}
+  #view-products .btn.sm.grey{background:#fff;color:var(--blue);border:1px solid var(--blue);}
+  #view-products .btn.sm.grey:hover{background:var(--blue-light);}
+  #view-products .btn.amber{background:#e3ece5;color:var(--navy);border:1px solid #aebfb2;}
+  #view-products .btn.amber:hover{background:#d4e3d8;}
+  .brand-jumpnav button{border-color:#bcd3c2;}
   /* Preview/Print: on-screen green styling only — the printed PDF keeps its own tuned look */
   @media screen{
     #view-preview .card{border-top:4px solid var(--blue);}
@@ -355,7 +364,7 @@
   <div class="toolbar no-print" style="margin-bottom:4px;">
     <h2 style="color:var(--navy);margin:0;border:none;">Product Library</h2>
     <div class="spacer"></div>
-    <button class="btn grey" id="btnExportProductsCsv">⬇ Export Products CSV</button>
+    <button class="btn secondary" id="btnExportProductsCsv">⬇ Export Products CSV</button>
   </div>
   <p class="small-note" style="margin:0 0 12px;">Products added here appear in the Product Name search field when building a coating system. Volume Solids and the Curing/Overcoat Interval note are pulled from whatever you enter here — source this from the product's own Technical Data Sheet (TDS). Products are grouped below by brand.</p>
   <div class="brand-jumpnav" id="brandJumpNav"></div>
