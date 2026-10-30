@@ -758,13 +758,33 @@
 
   // ---------- PRODUCT LIBRARY (user-managed, stored locally — see "Product Library" tab) ----------
   const PRODUCTS_STORAGE_KEY = "coatspec_products_v1";
-  const BRANDS = ["Jotun", "Nippon", "Kansai", "PPG"];
-  const CATEGORIES = ["Protective & Marine", "Decorative"];
   const DEFAULT_CATEGORY = "Protective & Marine";
-  // Brand/category combos to hide from the default grid (still shown if products already exist there).
-  const EXCLUDED_SECTIONS = [{brand:"PPG", category:"Decorative"}];
+  // Explicit, ordered list of Product Library sections. `label` overrides the default
+  // "<Brand> PMC" / "<Brand> <Category>" naming for sections that don't fit that pattern.
+  const SECTIONS = [
+    {brand:"Jotun",  category:"Protective & Marine"},
+    {brand:"Nippon", category:"Protective & Marine"},
+    {brand:"Kansai", category:"Protective & Marine"},
+    {brand:"PPG",    category:"Protective & Marine"},
+    {brand:"Hempel", category:"Protective & Marine"},
+    {brand:"Jotun",  category:"Decorative"},
+    {brand:"Nippon", category:"Decorative"},
+    {brand:"Kansai", category:"Decorative"},
+    {brand:"MCI",    category:"Decorative"},
+    {brand:"Dulux",  category:"Decorative"},
+    {brand:"Ardex",  category:"Quicseal", label:"Ardex-Quicseal"}
+  ];
   function sectionKey(brand, category){ return `${brand}__${category}`; }
-  function sectionLabel(brand, category){ return category===DEFAULT_CATEGORY ? `${brand} PMC` : `${brand} ${category}`; }
+  function findSection(brand, category){ return SECTIONS.find(s=> s.brand===brand && s.category===category); }
+  function sectionLabel(brand, category){
+    const s = findSection(brand, category);
+    if(s && s.label) return s.label;
+    return category===DEFAULT_CATEGORY ? `${brand} PMC` : `${brand} ${category}`;
+  }
+  function sectionHeading(brand, category){
+    const s = findSection(brand, category);
+    return s && s.label ? s.label : `${brand} — ${category}`;
+  }
   let products = [];
   async function loadProducts(){
     try{ products = JSON.parse(localStorage.getItem(PRODUCTS_STORAGE_KEY)) || []; }catch(e){ products = []; }
@@ -1322,14 +1342,8 @@
   function renderProducts(){
     const container = document.getElementById('productLibraryContainer');
 
-    // Fixed grid of (category, brand) sections — category outer so PMC sections stay first, matching the original layout.
-    const sectionList = [];
-    const isExcluded = (brand,category)=> EXCLUDED_SECTIONS.some(e=> e.brand===brand && e.category===category);
-    CATEGORIES.forEach(category=> BRANDS.forEach(brand=>{
-      if(!isExcluded(brand,category)) sectionList.push({brand, category});
-    }));
-    // Also cover any brand/category combos present in data but outside the default grid — including excluded
-    // ones that already have products in them (an excluded section only hides itself while genuinely empty).
+    const sectionList = SECTIONS.map(s=>({brand:s.brand, category:s.category}));
+    // Also cover any brand/category combos present in data but not in SECTIONS, so products are never hidden.
     products.forEach(p=>{
       const brand = p.brand || 'Jotun';
       const category = p.category || DEFAULT_CATEGORY;
@@ -1354,7 +1368,7 @@
       return `
       <div class="card" id="brandCard-${escapeHtml(key)}">
         <div class="toolbar">
-          <h3 style="margin:0;">${escapeHtml(brand)} — ${escapeHtml(category)}</h3>
+          <h3 style="margin:0;">${escapeHtml(sectionHeading(brand,category))}</h3>
           <div class="spacer"></div>
           <button class="btn sm" data-act="addproduct" data-brand="${escapeHtml(brand)}" data-category="${escapeHtml(category)}">+ Add ${escapeHtml(label)} Product</button>
         </div>
