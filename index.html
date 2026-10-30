@@ -785,7 +785,9 @@
   }
   function sectionHeading(brand, category){
     const s = findSection(brand, category);
-    return s && s.label ? s.label : `${brand} — ${category}`;
+    if(s && s.label) return s.label;
+    if(category==="Decorative") return `${brand} DC`;
+    return `${brand} — ${category}`;
   }
   let products = [];
   async function loadProducts(){
